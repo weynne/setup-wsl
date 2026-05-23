@@ -498,7 +498,7 @@ SSH_BACKUP_DIR="/mnt/c/Users/${WIN_USER}/.ssh-backup-wsl"
 if [ -d "$HOME/.ssh" ] && [ -n "$(ls -A "$HOME/.ssh" 2>/dev/null)" ]; then
   info "Backing up SSH keys..."
   mkdir -p "$SSH_BACKUP_DIR"
-  cp -r "$HOME/.ssh/." "$SSH_BACKUP_DIR/"
+  find "$HOME/.ssh" -maxdepth 1 -type f -exec cp {} "$SSH_BACKUP_DIR/" \;
   chmod 700 "$SSH_BACKUP_DIR"
   chmod 600 "$SSH_BACKUP_DIR"/* 2>/dev/null || true
   log "SSH backup saved to: C:\\Users\\${WIN_USER}\\.ssh-backup-wsl"
