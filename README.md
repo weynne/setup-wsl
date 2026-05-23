@@ -82,7 +82,6 @@ docker ps   # deve funcionar sem sudo após reabrir
 | Distro | Versão mínima |
 |---|---|
 | Ubuntu | 22.04 |
-| Debian | 11 (Bullseye) |
 | Arquitetura | x86_64 apenas |
 
 ---
