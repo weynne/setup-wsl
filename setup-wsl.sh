@@ -85,10 +85,10 @@ fi
 # Codenames de LTS que SABEMOS ter repositório publicado pelos vendors
 # (Docker, HashiCorp, Trivy etc). Ubuntu não-LTS ou mais novos que o último
 # repo publicado (ex: 26.04) caem no fallback abaixo.
-KNOWN_REPO_CODENAMES=("jammy" "noble")
+KNOWN_REPO_CODENAMES=("jammy" "noble" "resolute")
 # Último LTS conhecido — usado como fallback quando o codename atual ainda não
 # tem repo de terceiros publicado.
-FALLBACK_CODENAME="noble"
+FALLBACK_CODENAME="resolute"
 
 resolve_repo_codename() {
   local cn

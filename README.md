@@ -348,7 +348,7 @@ repos:
       - id: check-json
       - id: check-large-files
   - repo: https://github.com/gitleaks/gitleaks
-    rev: v8.18.0
+    rev: v8.30.1
     hooks:
       - id: gitleaks
 ```
@@ -501,7 +501,7 @@ docker system prune -af        # limpa tudo não utilizado
 
 ```dockerfile
 # Exemplo: multi-stage build para imagem mínima
-FROM golang:1.22 AS builder
+FROM golang:1.26 AS builder
 WORKDIR /app
 COPY . .
 RUN go build -o app .
