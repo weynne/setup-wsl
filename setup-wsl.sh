@@ -280,12 +280,14 @@ fi
 if ! command -v xh &>/dev/null; then
   info "Installing xh..."
   if XH_VERSION=$(github_latest_tag "ducaale/xh"); then
-    curl -fsSL "https://github.com/ducaale/xh/releases/download/${XH_VERSION}/xh-${XH_VERSION}-x86_64-unknown-linux-musl.tar.gz" \
+    if curl -fsSL "https://github.com/ducaale/xh/releases/download/${XH_VERSION}/xh-${XH_VERSION}-x86_64-unknown-linux-musl.tar.gz" \
       | tar -xz --strip-components=1 -C /tmp "xh-${XH_VERSION}-x86_64-unknown-linux-musl/xh" \
       && sudo install -o root -g root -m 0755 /tmp/xh /usr/local/bin/xh \
-      && rm -f /tmp/xh \
-      && log "xh $(xh --version) installed" \
-      || warn "xh install failed — skipping."
+      && rm -f /tmp/xh; then
+      log "xh $(xh --version) installed"
+    else
+      warn "xh install failed — skipping."
+    fi
   else
     warn "Could not resolve xh release (GitHub rate-limit?) — skipping."
   fi
@@ -297,12 +299,14 @@ fi
 if ! command -v sops &>/dev/null; then
   info "Installing sops..."
   if SOPS_VERSION=$(github_latest_tag "getsops/sops"); then
-    curl -fsSLo /tmp/sops \
+    if curl -fsSLo /tmp/sops \
       "https://github.com/getsops/sops/releases/download/${SOPS_VERSION}/sops-${SOPS_VERSION}.linux.amd64" \
       && sudo install -o root -g root -m 0755 /tmp/sops /usr/local/bin/sops \
-      && rm -f /tmp/sops \
-      && log "sops ${SOPS_VERSION} installed" \
-      || warn "sops install failed — skipping."
+      && rm -f /tmp/sops; then
+      log "sops ${SOPS_VERSION} installed"
+    else
+      warn "sops install failed — skipping."
+    fi
   else
     warn "Could not resolve sops release — skipping."
   fi
@@ -315,12 +319,14 @@ if ! command -v gh &>/dev/null; then
   info "Installing GitHub CLI..."
   if GH_TAG=$(github_latest_tag "cli/cli"); then
     GH_VERSION="${GH_TAG#v}"
-    curl -fsSL "https://github.com/cli/cli/releases/download/v${GH_VERSION}/gh_${GH_VERSION}_linux_amd64.tar.gz" \
+    if curl -fsSL "https://github.com/cli/cli/releases/download/v${GH_VERSION}/gh_${GH_VERSION}_linux_amd64.tar.gz" \
       | tar -xz -C /tmp \
       && sudo install -o root -g root -m 0755 "/tmp/gh_${GH_VERSION}_linux_amd64/bin/gh" /usr/local/bin/gh \
-      && rm -rf "/tmp/gh_${GH_VERSION}_linux_amd64" \
-      && log "GitHub CLI $(gh --version | head -n1) installed" \
-      || warn "GitHub CLI install failed — skipping."
+      && rm -rf "/tmp/gh_${GH_VERSION}_linux_amd64"; then
+      log "GitHub CLI $(gh --version | head -n1) installed"
+    else
+      warn "GitHub CLI install failed — skipping."
+    fi
   else
     warn "Could not resolve GitHub CLI release — skipping."
   fi
@@ -332,12 +338,14 @@ fi
 if ! command -v eza &>/dev/null; then
   info "Installing eza..."
   if EZA_VERSION=$(github_latest_tag "eza-community/eza"); then
-    curl -fsSL "https://github.com/eza-community/eza/releases/download/${EZA_VERSION}/eza_x86_64-unknown-linux-gnu.tar.gz" \
+    if curl -fsSL "https://github.com/eza-community/eza/releases/download/${EZA_VERSION}/eza_x86_64-unknown-linux-gnu.tar.gz" \
       | tar -xz --strip-components=1 -C /tmp ./eza \
       && sudo install -o root -g root -m 0755 /tmp/eza /usr/local/bin/eza \
-      && rm -f /tmp/eza \
-      && log "eza $(eza --version | head -n1) installed" \
-      || warn "eza install failed — skipping."
+      && rm -f /tmp/eza; then
+      log "eza $(eza --version | head -n1) installed"
+    else
+      warn "eza install failed — skipping."
+    fi
   else
     warn "Could not resolve eza release — skipping."
   fi
@@ -349,12 +357,14 @@ fi
 if ! command -v yq &>/dev/null; then
   info "Installing yq..."
   if YQ_VERSION=$(github_latest_tag "mikefarah/yq"); then
-    curl -fsSLo /tmp/yq \
+    if curl -fsSLo /tmp/yq \
       "https://github.com/mikefarah/yq/releases/download/${YQ_VERSION}/yq_linux_amd64" \
       && sudo install -o root -g root -m 0755 /tmp/yq /usr/local/bin/yq \
-      && rm -f /tmp/yq \
-      && log "yq $(yq --version) installed" \
-      || warn "yq install failed — skipping."
+      && rm -f /tmp/yq; then
+      log "yq $(yq --version) installed"
+    else
+      warn "yq install failed — skipping."
+    fi
   else
     warn "Could not resolve yq release — skipping."
   fi
@@ -366,11 +376,13 @@ fi
 if ! command -v nvim &>/dev/null; then
   info "Installing Neovim..."
   if NVIM_VERSION=$(github_latest_tag "neovim/neovim"); then
-    curl -fsSL "https://github.com/neovim/neovim/releases/download/${NVIM_VERSION}/nvim-linux-x86_64.tar.gz" \
+    if curl -fsSL "https://github.com/neovim/neovim/releases/download/${NVIM_VERSION}/nvim-linux-x86_64.tar.gz" \
       | sudo tar -xz -C /opt \
-      && sudo ln -sf /opt/nvim-linux-x86_64/bin/nvim /usr/local/bin/nvim \
-      && log "Neovim $(nvim --version | head -n1) installed" \
-      || warn "Neovim install failed — skipping."
+      && sudo ln -sf /opt/nvim-linux-x86_64/bin/nvim /usr/local/bin/nvim; then
+      log "Neovim $(nvim --version | head -n1) installed"
+    else
+      warn "Neovim install failed — skipping."
+    fi
   else
     warn "Could not resolve Neovim release — skipping."
   fi
@@ -383,12 +395,14 @@ if ! command -v lazygit &>/dev/null; then
   info "Installing lazygit..."
   if LAZYGIT_VERSION=$(github_latest_tag "jesseduffield/lazygit"); then
     LAZYGIT_VERSION_NUMBER="${LAZYGIT_VERSION#v}"
-    curl -fsSL "https://github.com/jesseduffield/lazygit/releases/download/${LAZYGIT_VERSION}/lazygit_${LAZYGIT_VERSION_NUMBER}_Linux_x86_64.tar.gz" \
+    if curl -fsSL "https://github.com/jesseduffield/lazygit/releases/download/${LAZYGIT_VERSION}/lazygit_${LAZYGIT_VERSION_NUMBER}_Linux_x86_64.tar.gz" \
       | tar -xz -C /tmp lazygit \
       && sudo install -o root -g root -m 0755 /tmp/lazygit /usr/local/bin/lazygit \
-      && rm -f /tmp/lazygit \
-      && log "lazygit $(lazygit --version) installed" \
-      || warn "lazygit install failed — skipping."
+      && rm -f /tmp/lazygit; then
+      log "lazygit $(lazygit --version) installed"
+    else
+      warn "lazygit install failed — skipping."
+    fi
   else
     warn "Could not resolve lazygit release — skipping."
   fi
@@ -401,12 +415,14 @@ if ! command -v lazydocker &>/dev/null; then
   info "Installing lazydocker..."
   if LAZYDOCKER_VERSION=$(github_latest_tag "jesseduffield/lazydocker"); then
     LAZYDOCKER_VERSION_NUMBER="${LAZYDOCKER_VERSION#v}"
-    curl -fsSL "https://github.com/jesseduffield/lazydocker/releases/download/${LAZYDOCKER_VERSION}/lazydocker_${LAZYDOCKER_VERSION_NUMBER}_Linux_x86_64.tar.gz" \
+    if curl -fsSL "https://github.com/jesseduffield/lazydocker/releases/download/${LAZYDOCKER_VERSION}/lazydocker_${LAZYDOCKER_VERSION_NUMBER}_Linux_x86_64.tar.gz" \
       | tar -xz -C /tmp lazydocker \
       && sudo install -o root -g root -m 0755 /tmp/lazydocker /usr/local/bin/lazydocker \
-      && rm -f /tmp/lazydocker \
-      && log "lazydocker $(lazydocker --version) installed" \
-      || warn "lazydocker install failed — skipping."
+      && rm -f /tmp/lazydocker; then
+      log "lazydocker $(lazydocker --version) installed"
+    else
+      warn "lazydocker install failed — skipping."
+    fi
   else
     warn "Could not resolve lazydocker release — skipping."
   fi
@@ -442,12 +458,14 @@ if ! command -v kubectl &>/dev/null; then
   info "Installing kubectl..."
   KUBECTL_VERSION=$(curl -fsSL --max-time 15 https://dl.k8s.io/release/stable.txt 2>/dev/null)
   if [ -n "$KUBECTL_VERSION" ]; then
-    curl -fsSLo /tmp/kubectl \
+    if curl -fsSLo /tmp/kubectl \
       "https://dl.k8s.io/release/${KUBECTL_VERSION}/bin/linux/amd64/kubectl" \
       && sudo install -o root -g root -m 0755 /tmp/kubectl /usr/local/bin/kubectl \
-      && rm -f /tmp/kubectl \
-      && log "kubectl ${KUBECTL_VERSION} installed" \
-      || warn "kubectl install failed — skipping."
+      && rm -f /tmp/kubectl; then
+      log "kubectl ${KUBECTL_VERSION} installed"
+    else
+      warn "kubectl install failed — skipping."
+    fi
   else
     warn "Could not resolve kubectl version — skipping."
   fi
@@ -459,12 +477,14 @@ fi
 if ! command -v kind &>/dev/null; then
   info "Installing kind..."
   if KIND_VERSION=$(github_latest_tag "kubernetes-sigs/kind"); then
-    curl -fsSLo /tmp/kind \
+    if curl -fsSLo /tmp/kind \
       "https://kind.sigs.k8s.io/dl/${KIND_VERSION}/kind-linux-amd64" \
       && sudo install -o root -g root -m 0755 /tmp/kind /usr/local/bin/kind \
-      && rm -f /tmp/kind \
-      && log "kind ${KIND_VERSION} installed" \
-      || warn "kind install failed — skipping."
+      && rm -f /tmp/kind; then
+      log "kind ${KIND_VERSION} installed"
+    else
+      warn "kind install failed — skipping."
+    fi
   else
     warn "Could not resolve kind release — skipping."
   fi
@@ -475,9 +495,11 @@ fi
 # — Helm
 if ! command -v helm &>/dev/null; then
   info "Installing Helm..."
-  curl -fsSL https://raw.githubusercontent.com/helm/helm/main/scripts/get-helm-3 | bash \
-    && log "Helm $(helm version --short) installed" \
-    || warn "Helm install failed — skipping."
+  if curl -fsSL https://raw.githubusercontent.com/helm/helm/main/scripts/get-helm-3 | bash; then
+    log "Helm $(helm version --short) installed"
+  else
+    warn "Helm install failed — skipping."
+  fi
 else
   skip "Helm already installed ($(helm version --short)), skipping..."
 fi
@@ -486,10 +508,12 @@ fi
 if ! command -v k9s &>/dev/null; then
   info "Installing k9s..."
   if K9S_VERSION=$(github_latest_tag "derailed/k9s"); then
-    curl -fsSL --max-time 60 "https://github.com/derailed/k9s/releases/download/${K9S_VERSION}/k9s_Linux_amd64.tar.gz" \
-      | sudo tar -xz -C /usr/local/bin k9s \
-      && log "k9s ${K9S_VERSION} installed" \
-      || warn "k9s install failed — skipping."
+    if curl -fsSL --max-time 60 "https://github.com/derailed/k9s/releases/download/${K9S_VERSION}/k9s_Linux_amd64.tar.gz" \
+      | sudo tar -xz -C /usr/local/bin k9s; then
+      log "k9s ${K9S_VERSION} installed"
+    else
+      warn "k9s install failed — skipping."
+    fi
   else
     warn "Could not resolve k9s release — skipping."
   fi
@@ -501,16 +525,18 @@ fi
 if ! command -v kubectx &>/dev/null; then
   info "Installing kubectx + kubens..."
   if KUBECTX_VERSION=$(github_latest_tag "ahmetb/kubectx"); then
-    curl -fsSL "https://github.com/ahmetb/kubectx/releases/download/${KUBECTX_VERSION}/kubectx_${KUBECTX_VERSION}_linux_x86_64.tar.gz" \
+    if curl -fsSL "https://github.com/ahmetb/kubectx/releases/download/${KUBECTX_VERSION}/kubectx_${KUBECTX_VERSION}_linux_x86_64.tar.gz" \
       | tar -xz -C /tmp kubectx \
       && sudo install -o root -g root -m 0755 /tmp/kubectx /usr/local/bin/kubectx \
-      && rm -f /tmp/kubectx
-    curl -fsSL "https://github.com/ahmetb/kubectx/releases/download/${KUBECTX_VERSION}/kubens_${KUBECTX_VERSION}_linux_x86_64.tar.gz" \
+      && rm -f /tmp/kubectx \
+      && curl -fsSL "https://github.com/ahmetb/kubectx/releases/download/${KUBECTX_VERSION}/kubens_${KUBECTX_VERSION}_linux_x86_64.tar.gz" \
       | tar -xz -C /tmp kubens \
       && sudo install -o root -g root -m 0755 /tmp/kubens /usr/local/bin/kubens \
-      && rm -f /tmp/kubens \
-      && log "kubectx + kubens ${KUBECTX_VERSION} installed" \
-      || warn "kubectx/kubens install failed — skipping."
+      && rm -f /tmp/kubens; then
+      log "kubectx + kubens ${KUBECTX_VERSION} installed"
+    else
+      warn "kubectx/kubens install failed — skipping."
+    fi
   else
     warn "Could not resolve kubectx release — skipping."
   fi
@@ -522,12 +548,14 @@ fi
 if ! command -v stern &>/dev/null; then
   info "Installing stern..."
   if STERN_VERSION=$(github_latest_tag "stern/stern"); then
-    curl -fsSL "https://github.com/stern/stern/releases/download/${STERN_VERSION}/stern_${STERN_VERSION#v}_linux_amd64.tar.gz" \
+    if curl -fsSL "https://github.com/stern/stern/releases/download/${STERN_VERSION}/stern_${STERN_VERSION#v}_linux_amd64.tar.gz" \
       | tar -xz -C /tmp stern \
       && sudo install -o root -g root -m 0755 /tmp/stern /usr/local/bin/stern \
-      && rm -f /tmp/stern \
-      && log "stern $(stern --version) installed" \
-      || warn "stern install failed — skipping."
+      && rm -f /tmp/stern; then
+      log "stern $(stern --version) installed"
+    else
+      warn "stern install failed — skipping."
+    fi
   else
     warn "Could not resolve stern release — skipping."
   fi
@@ -544,9 +572,11 @@ if ! command -v terraform &>/dev/null; then
     https://apt.releases.hashicorp.com ${REPO_CODENAME} main" \
     | sudo tee /etc/apt/sources.list.d/hashicorp.list > /dev/null
   sudo apt-get update -qq
-  sudo apt-get install -y terraform -qq \
-    && log "Terraform $(terraform version -json | jq -r '.terraform_version') installed" \
-    || warn "Terraform install failed — skipping."
+  if sudo apt-get install -y terraform -qq; then
+    log "Terraform $(terraform version -json | jq -r '.terraform_version') installed"
+  else
+    warn "Terraform install failed — skipping."
+  fi
 else
   skip "Terraform already installed, skipping..."
 fi
@@ -554,12 +584,14 @@ fi
 # — AWS CLI
 if ! command -v aws &>/dev/null; then
   info "Installing AWS CLI..."
-  curl -fsSL "https://awscli.amazonaws.com/awscli-exe-linux-x86_64.zip" -o /tmp/awscliv2.zip \
+  if curl -fsSL "https://awscli.amazonaws.com/awscli-exe-linux-x86_64.zip" -o /tmp/awscliv2.zip \
     && unzip -q /tmp/awscliv2.zip -d /tmp \
     && sudo /tmp/aws/install \
-    && rm -rf /tmp/awscliv2.zip /tmp/aws \
-    && log "AWS CLI $(aws --version 2>&1) installed" \
-    || warn "AWS CLI install failed — skipping."
+    && rm -rf /tmp/awscliv2.zip /tmp/aws; then
+    log "AWS CLI $(aws --version 2>&1) installed"
+  else
+    warn "AWS CLI install failed — skipping."
+  fi
 else
   skip "AWS CLI already installed ($(aws --version 2>&1)), skipping..."
 fi
@@ -569,12 +601,14 @@ if ! command -v delta &>/dev/null; then
   info "Installing git-delta..."
   if DELTA_TAG=$(github_latest_tag "dandavison/delta"); then
     DELTA_VERSION="${DELTA_TAG#v}"
-    curl -fsSL "https://github.com/dandavison/delta/releases/download/${DELTA_TAG}/delta-${DELTA_VERSION}-x86_64-unknown-linux-gnu.tar.gz" \
+    if curl -fsSL "https://github.com/dandavison/delta/releases/download/${DELTA_TAG}/delta-${DELTA_VERSION}-x86_64-unknown-linux-gnu.tar.gz" \
       | tar -xz -C /tmp \
       && sudo install -o root -g root -m 0755 "/tmp/delta-${DELTA_VERSION}-x86_64-unknown-linux-gnu/delta" /usr/local/bin/delta \
-      && rm -rf "/tmp/delta-${DELTA_VERSION}-x86_64-unknown-linux-gnu" \
-      && log "git-delta $(delta --version) installed" \
-      || warn "git-delta install failed — skipping."
+      && rm -rf "/tmp/delta-${DELTA_VERSION}-x86_64-unknown-linux-gnu"; then
+      log "git-delta $(delta --version) installed"
+    else
+      warn "git-delta install failed — skipping."
+    fi
   else
     warn "Could not resolve git-delta release — skipping."
   fi
@@ -586,12 +620,14 @@ fi
 if ! command -v zoxide &>/dev/null; then
   info "Installing zoxide..."
   if ZOXIDE_VERSION=$(github_latest_tag "ajeetdsouza/zoxide"); then
-    curl -fsSL "https://github.com/ajeetdsouza/zoxide/releases/download/${ZOXIDE_VERSION}/zoxide-${ZOXIDE_VERSION#v}-x86_64-unknown-linux-musl.tar.gz" \
+    if curl -fsSL "https://github.com/ajeetdsouza/zoxide/releases/download/${ZOXIDE_VERSION}/zoxide-${ZOXIDE_VERSION#v}-x86_64-unknown-linux-musl.tar.gz" \
       | tar -xz -C /tmp zoxide \
       && sudo install -o root -g root -m 0755 /tmp/zoxide /usr/local/bin/zoxide \
-      && rm -f /tmp/zoxide \
-      && log "zoxide $(zoxide --version) installed" \
-      || warn "zoxide install failed — skipping."
+      && rm -f /tmp/zoxide; then
+      log "zoxide $(zoxide --version) installed"
+    else
+      warn "zoxide install failed — skipping."
+    fi
   else
     warn "Could not resolve zoxide release — skipping."
   fi
@@ -603,12 +639,14 @@ fi
 if ! command -v task &>/dev/null; then
   info "Installing task (Taskfile)..."
   if TASK_VERSION=$(github_latest_tag "go-task/task"); then
-    curl -fsSL "https://github.com/go-task/task/releases/download/${TASK_VERSION}/task_linux_amd64.tar.gz" \
+    if curl -fsSL "https://github.com/go-task/task/releases/download/${TASK_VERSION}/task_linux_amd64.tar.gz" \
       | tar -xz -C /tmp task \
       && sudo install -o root -g root -m 0755 /tmp/task /usr/local/bin/task \
-      && rm -f /tmp/task \
-      && log "task $(task --version) installed" \
-      || warn "task install failed — skipping."
+      && rm -f /tmp/task; then
+      log "task $(task --version) installed"
+    else
+      warn "task install failed — skipping."
+    fi
   else
     warn "Could not resolve task release — skipping."
   fi
@@ -652,9 +690,11 @@ fi
 # — tflint (Terraform)
 if ! command -v tflint &>/dev/null; then
   info "Installing tflint..."
-  curl -fsSL https://raw.githubusercontent.com/terraform-linters/tflint/master/install_linux.sh | bash \
-    && log "tflint installed" \
-    || warn "tflint install failed — skipping."
+  if curl -fsSL https://raw.githubusercontent.com/terraform-linters/tflint/master/install_linux.sh | bash; then
+    log "tflint installed"
+  else
+    warn "tflint install failed — skipping."
+  fi
 else
   skip "tflint already installed, skipping..."
 fi
@@ -667,9 +707,11 @@ if ! command -v trivy &>/dev/null; then
   echo "deb [signed-by=/usr/share/keyrings/trivy.gpg] https://aquasecurity.github.io/trivy-repo/deb generic main" \
     | sudo tee /etc/apt/sources.list.d/trivy.list > /dev/null
   sudo apt-get update -qq
-  sudo apt-get install -y trivy -qq \
-    && log "trivy installed" \
-    || warn "trivy install failed — skipping."
+  if sudo apt-get install -y trivy -qq; then
+    log "trivy installed"
+  else
+    warn "trivy install failed — skipping."
+  fi
 else
   skip "trivy already installed, skipping..."
 fi
@@ -678,12 +720,14 @@ fi
 if ! command -v hadolint &>/dev/null; then
   info "Installing hadolint..."
   if HADOLINT_VERSION=$(github_latest_tag "hadolint/hadolint"); then
-    curl -fsSLo /tmp/hadolint \
+    if curl -fsSLo /tmp/hadolint \
       "https://github.com/hadolint/hadolint/releases/download/${HADOLINT_VERSION}/hadolint-Linux-x86_64" \
       && sudo install -o root -g root -m 0755 /tmp/hadolint /usr/local/bin/hadolint \
-      && rm -f /tmp/hadolint \
-      && log "hadolint $(hadolint --version) installed" \
-      || warn "hadolint install failed — skipping."
+      && rm -f /tmp/hadolint; then
+      log "hadolint $(hadolint --version) installed"
+    else
+      warn "hadolint install failed — skipping."
+    fi
   else
     warn "Could not resolve hadolint release — skipping."
   fi
@@ -695,10 +739,12 @@ fi
 if ! command -v kubeconform &>/dev/null; then
   info "Installing kubeconform..."
   if KUBECONFORM_VERSION=$(github_latest_tag "yannh/kubeconform"); then
-    curl -fsSL "https://github.com/yannh/kubeconform/releases/download/${KUBECONFORM_VERSION}/kubeconform-linux-amd64.tar.gz" \
-      | sudo tar -xz -C /usr/local/bin kubeconform \
-      && log "kubeconform installed" \
-      || warn "kubeconform install failed — skipping."
+    if curl -fsSL "https://github.com/yannh/kubeconform/releases/download/${KUBECONFORM_VERSION}/kubeconform-linux-amd64.tar.gz" \
+      | sudo tar -xz -C /usr/local/bin kubeconform; then
+      log "kubeconform installed"
+    else
+      warn "kubeconform install failed — skipping."
+    fi
   else
     warn "Could not resolve kubeconform release — skipping."
   fi
@@ -710,12 +756,14 @@ fi
 if ! command -v actionlint &>/dev/null; then
   info "Installing actionlint..."
   if ACTIONLINT_VERSION=$(github_latest_tag "rhysd/actionlint"); then
-    curl -fsSL "https://github.com/rhysd/actionlint/releases/download/${ACTIONLINT_VERSION}/actionlint_${ACTIONLINT_VERSION#v}_linux_amd64.tar.gz" \
+    if curl -fsSL "https://github.com/rhysd/actionlint/releases/download/${ACTIONLINT_VERSION}/actionlint_${ACTIONLINT_VERSION#v}_linux_amd64.tar.gz" \
       | tar -xz -C /tmp actionlint \
       && sudo install -o root -g root -m 0755 /tmp/actionlint /usr/local/bin/actionlint \
-      && rm -f /tmp/actionlint \
-      && log "actionlint $(actionlint --version) installed" \
-      || warn "actionlint install failed — skipping."
+      && rm -f /tmp/actionlint; then
+      log "actionlint $(actionlint --version) installed"
+    else
+      warn "actionlint install failed — skipping."
+    fi
   else
     warn "Could not resolve actionlint release — skipping."
   fi
@@ -727,12 +775,14 @@ fi
 if ! command -v terraform-docs &>/dev/null; then
   info "Installing terraform-docs..."
   if TERRAFORM_DOCS_VERSION=$(github_latest_tag "terraform-docs/terraform-docs"); then
-    curl -fsSL "https://github.com/terraform-docs/terraform-docs/releases/download/${TERRAFORM_DOCS_VERSION}/terraform-docs-${TERRAFORM_DOCS_VERSION}-linux-amd64.tar.gz" \
+    if curl -fsSL "https://github.com/terraform-docs/terraform-docs/releases/download/${TERRAFORM_DOCS_VERSION}/terraform-docs-${TERRAFORM_DOCS_VERSION}-linux-amd64.tar.gz" \
       | tar -xz -C /tmp terraform-docs \
       && sudo install -o root -g root -m 0755 /tmp/terraform-docs /usr/local/bin/terraform-docs \
-      && rm -f /tmp/terraform-docs \
-      && log "terraform-docs $(terraform-docs --version) installed" \
-      || warn "terraform-docs install failed — skipping."
+      && rm -f /tmp/terraform-docs; then
+      log "terraform-docs $(terraform-docs --version) installed"
+    else
+      warn "terraform-docs install failed — skipping."
+    fi
   else
     warn "Could not resolve terraform-docs release — skipping."
   fi
@@ -744,12 +794,14 @@ fi
 if ! command -v gitleaks &>/dev/null; then
   info "Installing gitleaks..."
   if GITLEAKS_VERSION=$(github_latest_tag "gitleaks/gitleaks"); then
-    curl -fsSL "https://github.com/gitleaks/gitleaks/releases/download/${GITLEAKS_VERSION}/gitleaks_${GITLEAKS_VERSION#v}_linux_x64.tar.gz" \
+    if curl -fsSL "https://github.com/gitleaks/gitleaks/releases/download/${GITLEAKS_VERSION}/gitleaks_${GITLEAKS_VERSION#v}_linux_x64.tar.gz" \
       | tar -xz -C /tmp gitleaks \
       && sudo install -o root -g root -m 0755 /tmp/gitleaks /usr/local/bin/gitleaks \
-      && rm -f /tmp/gitleaks \
-      && log "gitleaks $(gitleaks version) installed" \
-      || warn "gitleaks install failed — skipping."
+      && rm -f /tmp/gitleaks; then
+      log "gitleaks $(gitleaks version) installed"
+    else
+      warn "gitleaks install failed — skipping."
+    fi
   else
     warn "Could not resolve gitleaks release — skipping."
   fi
@@ -770,10 +822,12 @@ fi
 # — LazyVim
 if [ ! -d "$HOME/.config/nvim" ]; then
   info "Installing LazyVim starter..."
-  git clone https://github.com/LazyVim/starter "$HOME/.config/nvim" -q \
-    && rm -rf "$HOME/.config/nvim/.git" \
-    && log "LazyVim starter installed" \
-    || warn "LazyVim starter install failed — skipping."
+  if git clone https://github.com/LazyVim/starter "$HOME/.config/nvim" -q \
+    && rm -rf "$HOME/.config/nvim/.git"; then
+    log "LazyVim starter installed"
+  else
+    warn "LazyVim starter install failed — skipping."
+  fi
 else
   skip "Neovim config already exists at ~/.config/nvim, skipping LazyVim starter..."
 fi
@@ -990,9 +1044,11 @@ if command -v code &>/dev/null; then
   )
 
   for ext in "${VSCODE_EXTENSIONS[@]}"; do
-    code --install-extension "$ext" --force 2>/dev/null \
-      && log "  ✓ $ext" \
-      || warn "  ✗ $ext (failed)"
+    if code --install-extension "$ext" --force 2>/dev/null; then
+      log "  ✓ $ext"
+    else
+      warn "  ✗ $ext (failed)"
+    fi
   done
 
   VSCODE_COLOR_THEME="Dracula Theme"
