@@ -214,6 +214,11 @@ else
   skip "Node.js already installed ($(node --version)), skipping..."
 fi
 
+# — npm (upgrade to latest)
+info "Upgrading npm to latest..."
+sudo npm install -g npm@latest
+log "npm $(npm --version) installed"
+
 # — markdownlint-cli2
 if ! command -v markdownlint-cli2 &>/dev/null; then
   info "Installing markdownlint-cli2..."
