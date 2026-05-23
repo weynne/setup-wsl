@@ -110,38 +110,115 @@ As ferramentas instaladas por releases externas ou instaladores oficiais usam a 
 
 #### Pacotes essenciais
 
-Ferramentas base para baixar arquivos, compilar dependências, inspecionar o sistema e lidar com arquivos compactados.
+Ferramentas base para baixar arquivos, verificar assinaturas, compilar dependências e lidar com arquivos compactados.
+
+**curl** — transferência de dados por HTTP/HTTPS/FTP, a ferramenta mais usada em scripts de instalação e CI/CD:
 
 ```bash
-curl -fsSL https://example.com/file.txt -o file.txt
-wget https://example.com/file.zip
-tar -tzf arquivo.tar.gz
+curl -fsSL https://exemplo.com/arquivo.txt -o arquivo.txt   # download silencioso
+curl -fsSL https://exemplo.com/script.sh | bash              # pipe direto para execução
+curl -I https://exemplo.com                                  # só os headers HTTP
+curl -o /dev/null -s -w "%{http_code}" https://exemplo.com  # só o status code
+curl -u usuario:senha https://api.exemplo.com/recurso        # basic auth
+```
+
+**wget** — download de arquivos e mirrors recursivos:
+
+```bash
+wget https://exemplo.com/arquivo.zip
+wget -q -O arquivo.zip https://exemplo.com/arquivo.zip      # silencioso com nome definido
+wget -r -np https://exemplo.com/docs/                       # download recursivo
+wget -c https://exemplo.com/arquivo.iso                     # retoma download interrompido
+```
+
+**tar / unzip** — compactação e extração de arquivos:
+
+```bash
+tar -xzf arquivo.tar.gz                  # extrai .tar.gz
+tar -xzf arquivo.tar.gz -C /destino/    # extrai em pasta específica
+tar -czf backup.tar.gz ./pasta/         # cria arquivo compactado
+tar -tzf arquivo.tar.gz                 # lista conteúdo sem extrair
 unzip arquivo.zip
+unzip arquivo.zip -d /destino/
+unzip -l arquivo.zip                    # lista conteúdo sem extrair
+```
+
+**gpg** — verificação de assinaturas e gerenciamento de chaves de repositórios APT:
+
+```bash
 gpg --version
-lsb_release -a
+gpg --import chave.asc                                        # importa chave pública
+gpg --verify arquivo.sig arquivo                              # verifica assinatura
+gpg --fingerprint email@exemplo.com                           # exibe fingerprint da chave
+curl -fsSL https://repo.exemplo.com/gpg | gpg --dearmor \
+  | sudo tee /usr/share/keyrings/repo.gpg > /dev/null        # adiciona chave para apt
+```
+
+**lsb_release / /etc/os-release** — identifica a distribuição, útil em scripts de setup:
+
+```bash
+lsb_release -a                          # informações completas da distro
+lsb_release -cs                         # só o codename (ex: noble, jammy)
+cat /etc/os-release                     # arquivo de referência usado pelo script
 ```
 
 #### Build tools
 
-Compiladores e utilitários usados por dependências nativas de Python, Node, Go, Neovim/Treesitter e outras CLIs.
+`gcc` e `make` são dependências de compilação usadas por extensões nativas de Python, módulos npm, Neovim plugins e diversas CLIs que não distribuem binários pré-compilados.
 
 ```bash
 gcc --version
+gcc -o programa programa.c              # compila um arquivo C
+gcc -O2 -o programa programa.c         # com otimização
+
 make --version
-make build
+make                                    # executa o alvo padrão do Makefile
+make build                             # alvo específico
+make clean                             # limpa artefatos de build
+make -n build                          # dry-run — mostra o que executaria
+make -j4                               # paraleliza em 4 threads
 ```
+
+**Em produção:** dependências indiretas — raramente usadas diretamente, mas necessárias para `pip install` de pacotes com extensões C, `npm install` de módulos nativos e compilação de plugins do Neovim.
 
 #### Rede
 
-Ferramentas para inspecionar interfaces, rotas, portas e DNS no WSL.
+Ferramentas para inspecionar interfaces, rotas, conexões e DNS dentro do WSL — essenciais para debug de conectividade e configuração de rede.
+
+**ip** — inspeciona e configura interfaces e rotas:
 
 ```bash
-ip addr
-ip route
-ss -tulpn
-dig google.com +short
-nslookup google.com
+ip addr                                 # lista interfaces e IPs
+ip addr show eth0                      # interface específica
+ip route                               # tabela de rotas
+ip route show default                  # só o gateway padrão
+ip link show                           # estado das interfaces (UP/DOWN)
 ```
+
+**ss** — substituto moderno do `netstat`, mostra conexões e portas abertas:
+
+```bash
+ss -tulpn                              # todas as portas em escuta (TCP+UDP) com processos
+ss -tlnp                               # só TCP
+ss -s                                  # resumo de estatísticas
+ss -tp                                 # conexões TCP ativas com processos
+```
+
+**dig / nslookup** — consultas DNS, úteis para debug de resolução de nomes no WSL:
+
+```bash
+dig google.com                         # consulta DNS completa
+dig google.com +short                  # só o IP
+dig google.com A                       # registro A (IPv4)
+dig google.com AAAA                    # registro AAAA (IPv6)
+dig google.com MX                      # servidores de e-mail
+dig @8.8.8.8 google.com               # força uso do DNS do Google
+dig @1.1.1.1 google.com +short        # DNS da Cloudflare
+nslookup google.com
+nslookup google.com 8.8.8.8           # com DNS específico
+```
+
+**Em produção:** `ss -tulpn` para verificar se uma porta está em uso antes de subir um serviço; `dig` para validar propagação de DNS após mudança de registros.
 
 ### Terminal e shell
 
