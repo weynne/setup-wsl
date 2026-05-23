@@ -13,6 +13,10 @@ set -e
 ARCH=$(uname -m)
 DISTRO_ID=$(grep "^ID=" /etc/os-release 2>/dev/null | cut -d= -f2 | tr -d '"')
 DISTRO_VERSION=$(grep "^VERSION_ID=" /etc/os-release 2>/dev/null | cut -d= -f2 | tr -d '"')
+VERSION_CODENAME=$(grep -E "^(VERSION_CODENAME|UBUNTU_CODENAME)=" /etc/os-release 2>/dev/null \
+  | head -n1 \
+  | cut -d= -f2 \
+  | tr -d '"')
 
 error_exit() {
   echo ""
@@ -56,14 +60,19 @@ NC='\033[0m'
 
 log()    { echo -e "${GREEN}[✔]${NC} $1"; }
 info()   { echo -e "${CYAN}[→]${NC} $1"; }
-skip()   { echo -e "${GREEN}[✔]${NC} $1"; }
+skip()   { echo -e "${CYAN}[~]${NC} $1"; }
 warn()   { echo -e "${YELLOW}[!]${NC} $1"; }
 header() { echo -e "\n${BOLD}${CYAN}╔══════════════════════════════════════╗${NC}"; \
            echo -e "${BOLD}${CYAN}║  $1$(printf '%*s' $((36 - ${#1})) '')║${NC}"; \
            echo -e "${BOLD}${CYAN}╚══════════════════════════════════════╝${NC}\n"; }
 
 github_latest_tag() {
-  curl -fsSL "https://api.github.com/repos/$1/releases/latest" | jq -r '.tag_name'
+  local tag
+  tag=$(curl -fsSL "https://api.github.com/repos/$1/releases/latest" | jq -r '.tag_name')
+  if [ -z "$tag" ] || [ "$tag" = "null" ]; then
+    error_exit "Could not resolve latest release for '$1' (GitHub API rate limit — wait a few minutes and retry)"
+  fi
+  echo "$tag"
 }
 
 # Request sudo once and keep cache alive throughout the script
@@ -74,6 +83,23 @@ if ! sudo -n true 2>/dev/null; then
   sudo -v
 fi
 while true; do sudo -n true; sleep 50; kill -0 "$$" || exit; done 2>/dev/null &
+SUDO_KEEPALIVE_PID=$!
+trap 'kill "$SUDO_KEEPALIVE_PID" 2>/dev/null' EXIT
+
+repair_docker_apt_source() {
+  local docker_source="/etc/apt/sources.list.d/docker.list"
+
+  if [ -f "$docker_source" ] && grep -q "download.docker.com/linux/${DISTRO_ID}" "$docker_source"; then
+    info "Repairing Docker apt source..."
+    printf 'deb [arch=%s signed-by=/etc/apt/keyrings/docker.gpg] https://download.docker.com/linux/%s %s stable\n' \
+      "$(dpkg --print-architecture)" \
+      "$DISTRO_ID" \
+      "$VERSION_CODENAME" \
+      | sudo tee "$docker_source" > /dev/null
+  fi
+}
+
+repair_docker_apt_source
 
 # =============================================================================
 # 1. ATUALIZAÇÃO DO SISTEMA
@@ -98,6 +124,7 @@ PACKAGES=(
   gcc unzip fuse
   age
   htop net-tools iproute2 dnsutils
+  tmux
 )
 
 sudo apt-get install -y "${PACKAGES[@]}" -qq
@@ -118,12 +145,12 @@ if ! command -v docker &>/dev/null; then
   info "Adding Docker repository..."
   sudo install -m 0755 -d /etc/apt/keyrings
   curl -fsSL "https://download.docker.com/linux/${DISTRO_ID}/gpg" \
-    | sudo gpg --dearmor -o /etc/apt/keyrings/docker.gpg
+    | sudo gpg --batch --yes --dearmor -o /etc/apt/keyrings/docker.gpg
   sudo chmod a+r /etc/apt/keyrings/docker.gpg
-  echo \
-    "deb [arch=$(dpkg --print-architecture) signed-by=/etc/apt/keyrings/docker.gpg] \
-    https://download.docker.com/linux/${DISTRO_ID} \
-    ${VERSION_CODENAME} stable" \
+  printf 'deb [arch=%s signed-by=/etc/apt/keyrings/docker.gpg] https://download.docker.com/linux/%s %s stable\n' \
+    "$(dpkg --print-architecture)" \
+    "$DISTRO_ID" \
+    "$VERSION_CODENAME" \
     | sudo tee /etc/apt/sources.list.d/docker.list > /dev/null
   sudo apt-get update -qq
   sudo apt-get install -y -qq \
@@ -136,9 +163,7 @@ else
 fi
 
 # =============================================================================
-# 4. NODE.JS LTS
-# =============================================================================
-# 5. FERRAMENTAS DE DESENVOLVIMENTO
+# 4. FERRAMENTAS DE DESENVOLVIMENTO
 # =============================================================================
 header "4/5 · Tools"
 
@@ -187,15 +212,6 @@ if ! command -v node &>/dev/null; then
   log "Node.js $(node --version) installed"
 else
   skip "Node.js already installed ($(node --version)), skipping..."
-fi
-
-# — tree-sitter-cli
-if ! command -v tree-sitter &>/dev/null; then
-  info "Installing tree-sitter-cli..."
-  sudo npm install -g tree-sitter-cli
-  log "tree-sitter-cli $(tree-sitter --version) installed"
-else
-  skip "tree-sitter-cli already installed ($(tree-sitter --version)), skipping..."
 fi
 
 # — markdownlint-cli2
@@ -298,6 +314,33 @@ else
   skip "lazygit already installed ($(lazygit --version)), skipping..."
 fi
 
+# — lazydocker
+if ! command -v lazydocker &>/dev/null; then
+  info "Installing lazydocker..."
+  LAZYDOCKER_VERSION=$(github_latest_tag "jesseduffield/lazydocker")
+  LAZYDOCKER_VERSION_NUMBER="${LAZYDOCKER_VERSION#v}"
+  curl -fsSL "https://github.com/jesseduffield/lazydocker/releases/download/${LAZYDOCKER_VERSION}/lazydocker_${LAZYDOCKER_VERSION_NUMBER}_Linux_x86_64.tar.gz" \
+    | tar -xz -C /tmp lazydocker
+  sudo install -o root -g root -m 0755 /tmp/lazydocker /usr/local/bin/lazydocker
+  rm /tmp/lazydocker
+  log "lazydocker $(lazydocker --version) installed"
+else
+  skip "lazydocker already installed ($(lazydocker --version)), skipping..."
+fi
+
+# — dive
+if ! command -v dive &>/dev/null; then
+  info "Installing dive..."
+  DIVE_VERSION=$(github_latest_tag "wagoodman/dive")
+  curl -fsSL "https://github.com/wagoodman/dive/releases/download/${DIVE_VERSION}/dive_${DIVE_VERSION#v}_linux_amd64.tar.gz" \
+    | tar -xz -C /tmp dive
+  sudo install -o root -g root -m 0755 /tmp/dive /usr/local/bin/dive
+  rm /tmp/dive
+  log "dive $(dive --version) installed"
+else
+  skip "dive already installed ($(dive --version)), skipping..."
+fi
+
 # — kubectl
 if ! command -v kubectl &>/dev/null; then
   info "Installing kubectl..."
@@ -344,19 +387,61 @@ else
   skip "k9s already installed, skipping..."
 fi
 
+# — kubectx + kubens
+if ! command -v kubectx &>/dev/null; then
+  info "Installing kubectx + kubens..."
+  KUBECTX_VERSION=$(github_latest_tag "ahmetb/kubectx")
+  curl -fsSL "https://github.com/ahmetb/kubectx/releases/download/${KUBECTX_VERSION}/kubectx_${KUBECTX_VERSION}_linux_x86_64.tar.gz" \
+    | tar -xz -C /tmp kubectx
+  sudo install -o root -g root -m 0755 /tmp/kubectx /usr/local/bin/kubectx
+  rm /tmp/kubectx
+  curl -fsSL "https://github.com/ahmetb/kubectx/releases/download/${KUBECTX_VERSION}/kubens_${KUBECTX_VERSION}_linux_x86_64.tar.gz" \
+    | tar -xz -C /tmp kubens
+  sudo install -o root -g root -m 0755 /tmp/kubens /usr/local/bin/kubens
+  rm /tmp/kubens
+  log "kubectx + kubens ${KUBECTX_VERSION} installed"
+else
+  skip "kubectx already installed ($(kubectx --version 2>/dev/null || echo n/a)), skipping..."
+fi
+
+# — stern
+if ! command -v stern &>/dev/null; then
+  info "Installing stern..."
+  STERN_VERSION=$(github_latest_tag "stern/stern")
+  curl -fsSL "https://github.com/stern/stern/releases/download/${STERN_VERSION}/stern_${STERN_VERSION#v}_linux_amd64.tar.gz" \
+    | tar -xz -C /tmp stern
+  sudo install -o root -g root -m 0755 /tmp/stern /usr/local/bin/stern
+  rm /tmp/stern
+  log "stern $(stern --version) installed"
+else
+  skip "stern already installed ($(stern --version)), skipping..."
+fi
+
 # — Terraform
 if ! command -v terraform &>/dev/null; then
   info "Installing Terraform..."
   wget -O - https://apt.releases.hashicorp.com/gpg \
-    | sudo gpg --dearmor -o /usr/share/keyrings/hashicorp-archive-keyring.gpg 2>/dev/null
+    | sudo gpg --batch --yes --dearmor -o /usr/share/keyrings/hashicorp-archive-keyring.gpg
   echo "deb [arch=$(dpkg --print-architecture) signed-by=/usr/share/keyrings/hashicorp-archive-keyring.gpg] \
-    https://apt.releases.hashicorp.com $(lsb_release -cs) main" \
+    https://apt.releases.hashicorp.com ${VERSION_CODENAME} main" \
     | sudo tee /etc/apt/sources.list.d/hashicorp.list > /dev/null
   sudo apt-get update -qq
   sudo apt-get install -y terraform -qq
   log "Terraform $(terraform version -json | jq -r '.terraform_version') installed"
 else
   skip "Terraform already installed, skipping..."
+fi
+
+# — AWS CLI
+if ! command -v aws &>/dev/null; then
+  info "Installing AWS CLI..."
+  curl -fsSL "https://awscli.amazonaws.com/awscli-exe-linux-x86_64.zip" -o /tmp/awscliv2.zip
+  unzip -q /tmp/awscliv2.zip -d /tmp
+  sudo /tmp/aws/install
+  rm -rf /tmp/awscliv2.zip /tmp/aws
+  log "AWS CLI $(aws --version 2>&1) installed"
+else
+  skip "AWS CLI already installed ($(aws --version 2>&1)), skipping..."
 fi
 
 # — git-delta
@@ -371,6 +456,32 @@ if ! command -v delta &>/dev/null; then
   log "git-delta $(delta --version) installed"
 else
   skip "git-delta already installed ($(delta --version)), skipping..."
+fi
+
+# — zoxide
+if ! command -v zoxide &>/dev/null; then
+  info "Installing zoxide..."
+  ZOXIDE_VERSION=$(github_latest_tag "ajeetdsouza/zoxide")
+  curl -fsSL "https://github.com/ajeetdsouza/zoxide/releases/download/${ZOXIDE_VERSION}/zoxide-${ZOXIDE_VERSION#v}-x86_64-unknown-linux-musl.tar.gz" \
+    | tar -xz -C /tmp zoxide
+  sudo install -o root -g root -m 0755 /tmp/zoxide /usr/local/bin/zoxide
+  rm /tmp/zoxide
+  log "zoxide $(zoxide --version) installed"
+else
+  skip "zoxide already installed ($(zoxide --version)), skipping..."
+fi
+
+# — task (Taskfile)
+if ! command -v task &>/dev/null; then
+  info "Installing task (Taskfile)..."
+  TASK_VERSION=$(github_latest_tag "go-task/task")
+  curl -fsSL "https://github.com/go-task/task/releases/download/${TASK_VERSION}/task_linux_amd64.tar.gz" \
+    | tar -xz -C /tmp task
+  sudo install -o root -g root -m 0755 /tmp/task /usr/local/bin/task
+  rm /tmp/task
+  log "task $(task --version) installed"
+else
+  skip "task already installed ($(task --version)), skipping..."
 fi
 
 # =============================================================================
@@ -419,7 +530,7 @@ fi
 if ! command -v trivy &>/dev/null; then
   info "Installing trivy..."
   curl -fsSL https://aquasecurity.github.io/trivy-repo/deb/public.key \
-    | sudo gpg --dearmor -o /usr/share/keyrings/trivy.gpg
+    | sudo gpg --batch --yes --dearmor -o /usr/share/keyrings/trivy.gpg
   echo "deb [signed-by=/usr/share/keyrings/trivy.gpg] https://aquasecurity.github.io/trivy-repo/deb generic main" \
     | sudo tee /etc/apt/sources.list.d/trivy.list > /dev/null
   sudo apt-get update -qq
@@ -477,6 +588,29 @@ if ! command -v terraform-docs &>/dev/null; then
   log "terraform-docs $(terraform-docs --version) installed"
 else
   skip "terraform-docs already installed ($(terraform-docs --version)), skipping..."
+fi
+
+# — gitleaks (secrets em git)
+if ! command -v gitleaks &>/dev/null; then
+  info "Installing gitleaks..."
+  GITLEAKS_VERSION=$(github_latest_tag "gitleaks/gitleaks")
+  curl -fsSL "https://github.com/gitleaks/gitleaks/releases/download/${GITLEAKS_VERSION}/gitleaks_${GITLEAKS_VERSION#v}_linux_x64.tar.gz" \
+    | tar -xz -C /tmp gitleaks
+  sudo install -o root -g root -m 0755 /tmp/gitleaks /usr/local/bin/gitleaks
+  rm /tmp/gitleaks
+  log "gitleaks $(gitleaks version) installed"
+else
+  skip "gitleaks already installed ($(gitleaks version)), skipping..."
+fi
+
+# — checkov (segurança IaC: Terraform, K8s, Dockerfiles, GitHub Actions)
+if ! command -v checkov &>/dev/null; then
+  info "Installing checkov..."
+  pipx install checkov
+  hash -r
+  log "checkov $(checkov --version) installed"
+else
+  skip "checkov already installed ($(checkov --version)), skipping..."
 fi
 
 # — LazyVim
@@ -541,6 +675,7 @@ fi
 
 # — .zshrc
 info "Generating .zshrc..."
+[ -f "$HOME/.zshrc" ] && cp "$HOME/.zshrc" "$HOME/.zshrc.bak.$(date +%Y%m%d%H%M%S)"
 cat > "$HOME/.zshrc" << 'ZSHRC'
 # Powerlevel10k instant prompt
 if [[ -r "${XDG_CACHE_HOME:-$HOME/.cache}/p10k-instant-prompt-${(%):-%n}.zsh" ]]; then
@@ -556,6 +691,7 @@ plugins=(
   docker-compose
   python
   kubectl
+  helm
   terraform
   zsh-autosuggestions
   zsh-syntax-highlighting
@@ -585,12 +721,15 @@ alias gp='git push'
 alias dcu='docker compose up -d'
 alias dcd='docker compose down'
 alias dcl='docker compose logs -f'
+alias ld='lazydocker'
 
 # Aliases — kubectl
 alias kc='kubectl'
 alias kgp='kubectl get pods'
 alias kgs='kubectl get svc'
 alias kgn='kubectl get nodes'
+alias kctx='kubectx'
+alias kns='kubens'
 
 # Aliases — terraform
 alias tf='terraform'
@@ -604,6 +743,9 @@ eval "$(uv generate-shell-completion zsh)"
 
 # direnv
 eval "$(direnv hook zsh)"
+
+# zoxide (smart cd)
+eval "$(zoxide init zsh)"
 
 # fzf keybindings/completion (Debian/Ubuntu package layout)
 [ -f /usr/share/doc/fzf/examples/key-bindings.zsh ] && source /usr/share/doc/fzf/examples/key-bindings.zsh
@@ -628,10 +770,14 @@ git config --global delta.side-by-side true
 log "git configured"
 
 WIN_USER=$(cmd.exe /c "echo %USERNAME%" 2>/dev/null | tr -d '\r')
+WSLCONFIG_UPDATED=false
+
+if [ -z "$WIN_USER" ]; then
+  warn "Windows username not detected — skipping .wslconfig, VSCode and Windows Terminal setup"
+else
 
 # — .wslconfig com mirrored networking (resolve compatibilidade com VPN/Boundary)
 WSLCONFIG="/mnt/c/Users/${WIN_USER}/.wslconfig"
-WSLCONFIG_UPDATED=false
 if [ ! -f "$WSLCONFIG" ] || ! grep -q "networkingMode=mirrored" "$WSLCONFIG" 2>/dev/null; then
   info "Configuring .wslconfig with mirrored networking..."
   cat >> "$WSLCONFIG" << 'WSLCFG'
@@ -825,6 +971,8 @@ powershell.exe -NoProfile -NonInteractive -Command "
 " 2>/dev/null
 rm -rf "$FONT_TMP"
 log "MesloLGS NF fonts installed"
+
+fi  # [ -n "$WIN_USER" ]
 
 # =============================================================================
 # RESUMO FINAL
