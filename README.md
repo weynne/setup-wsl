@@ -1030,7 +1030,7 @@ Integração com pre-commit:
 
 ```yaml
 - repo: https://github.com/gitleaks/gitleaks
-  rev: v8.18.0
+  rev: v8.30.1
   hooks:
     - id: gitleaks
 ```
