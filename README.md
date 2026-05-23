@@ -1,6 +1,6 @@
 # WSL DevOps Setup
 
-Setup automatizado para WSL (Ubuntu/Debian) com ferramentas de desenvolvimento e DevOps.
+Setup automatizado para WSL (Ubuntu 22.04+) com ferramentas de desenvolvimento e DevOps.
 
 ---
 
