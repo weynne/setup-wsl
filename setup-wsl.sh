@@ -189,6 +189,15 @@ else
   skip "Node.js already installed ($(node --version)), skipping..."
 fi
 
+# — tree-sitter-cli
+if ! command -v tree-sitter &>/dev/null; then
+  info "Installing tree-sitter-cli..."
+  sudo npm install -g tree-sitter-cli
+  log "tree-sitter-cli $(tree-sitter --version) installed"
+else
+  skip "tree-sitter-cli already installed ($(tree-sitter --version)), skipping..."
+fi
+
 # — markdownlint-cli2
 if ! command -v markdownlint-cli2 &>/dev/null; then
   info "Installing markdownlint-cli2..."
@@ -261,6 +270,32 @@ if ! command -v yq &>/dev/null; then
   log "yq $(yq --version) installed"
 else
   skip "yq already installed ($(yq --version)), skipping..."
+fi
+
+# — Neovim
+if ! command -v nvim &>/dev/null; then
+  info "Installing Neovim..."
+  NVIM_VERSION=$(github_latest_tag "neovim/neovim")
+  curl -fsSL "https://github.com/neovim/neovim/releases/download/${NVIM_VERSION}/nvim-linux-x86_64.tar.gz" \
+    | sudo tar -xz -C /opt
+  sudo ln -sf /opt/nvim-linux-x86_64/bin/nvim /usr/local/bin/nvim
+  log "Neovim $(nvim --version | head -n1) installed"
+else
+  skip "Neovim already installed ($(nvim --version | head -n1)), skipping..."
+fi
+
+# — lazygit
+if ! command -v lazygit &>/dev/null; then
+  info "Installing lazygit..."
+  LAZYGIT_VERSION=$(github_latest_tag "jesseduffield/lazygit")
+  LAZYGIT_VERSION_NUMBER="${LAZYGIT_VERSION#v}"
+  curl -fsSL "https://github.com/jesseduffield/lazygit/releases/download/${LAZYGIT_VERSION}/lazygit_${LAZYGIT_VERSION_NUMBER}_Linux_x86_64.tar.gz" \
+    | tar -xz -C /tmp lazygit
+  sudo install -o root -g root -m 0755 /tmp/lazygit /usr/local/bin/lazygit
+  rm /tmp/lazygit
+  log "lazygit $(lazygit --version) installed"
+else
+  skip "lazygit already installed ($(lazygit --version)), skipping..."
 fi
 
 # — kubectl
@@ -442,6 +477,16 @@ if ! command -v terraform-docs &>/dev/null; then
   log "terraform-docs $(terraform-docs --version) installed"
 else
   skip "terraform-docs already installed ($(terraform-docs --version)), skipping..."
+fi
+
+# — LazyVim
+if [ ! -d "$HOME/.config/nvim" ]; then
+  info "Installing LazyVim starter..."
+  git clone https://github.com/LazyVim/starter "$HOME/.config/nvim" -q
+  rm -rf "$HOME/.config/nvim/.git"
+  log "LazyVim starter installed"
+else
+  skip "Neovim config already exists at ~/.config/nvim, skipping LazyVim starter..."
 fi
 header "5/5 · Environment setup"
 

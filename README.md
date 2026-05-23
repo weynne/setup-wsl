@@ -30,13 +30,14 @@ Baixe na [Microsoft Store](https://aka.ms/terminal). O script configura o tema M
 
 ---
 
-### Passo 4 — Prepare a pasta do setup
+### Passo 4 — Baixe o setup
 
-Crie uma pasta chamada `setup_wsl` em qualquer lugar no Windows (ex: `C:\Users\<seu-usuario>\setup_wsl`) e coloque os arquivos dentro:
+No WSL, clone este repositório:
 
-```
-📁 setup_wsl\
-└── setup-wsl.sh
+```bash
+cd ~
+git clone https://github.com/weynne/setup-wsl.git
+cd setup-wsl
 ```
 
 ---
@@ -46,7 +47,6 @@ Crie uma pasta chamada `setup_wsl` em qualquer lugar no Windows (ex: `C:\Users\<
 Abra o WSL, navegue até a pasta e execute:
 
 ```bash
-cd /mnt/c/Users/<seu-usuario>/setup_wsl
 chmod +x setup-wsl.sh
 ./setup-wsl.sh
 ```
@@ -106,6 +106,43 @@ docker ps   # deve funcionar sem sudo após reabrir
 
 As ferramentas instaladas por releases externas ou instaladores oficiais usam a versão estável mais recente disponível no momento da execução. Pacotes instalados via `apt` usam a versão disponível nos repositórios configurados da distro.
 
+### Base Linux
+
+#### Pacotes essenciais
+
+Ferramentas base para baixar arquivos, compilar dependências, inspecionar o sistema e lidar com arquivos compactados.
+
+```bash
+curl -fsSL https://example.com/file.txt -o file.txt
+wget https://example.com/file.zip
+tar -tzf arquivo.tar.gz
+unzip arquivo.zip
+gpg --version
+lsb_release -a
+```
+
+#### Build tools
+
+Compiladores e utilitários usados por dependências nativas de Python, Node, Go, Neovim/Treesitter e outras CLIs.
+
+```bash
+gcc --version
+make --version
+make build
+```
+
+#### Rede
+
+Ferramentas para inspecionar interfaces, rotas, portas e DNS no WSL.
+
+```bash
+ip addr
+ip route
+ss -tulpn
+dig google.com +short
+nslookup google.com
+```
+
 ### Terminal e shell
 
 #### zsh + oh-my-zsh + powerlevel10k
@@ -146,12 +183,13 @@ go mod tidy
 
 #### Node.js + npm
 
-Node.js LTS é instalado para suportar ferramentas distribuídas via npm, como `markdownlint-cli2`.
+Node.js LTS é instalado para suportar ferramentas distribuídas via npm, como `markdownlint-cli2` e `tree-sitter-cli`.
 
 ```bash
 node --version
 npm --version
 npm install -g pacote-cli
+tree-sitter --version
 ```
 
 #### Python + uv + pipx
@@ -225,6 +263,47 @@ git diff
 git show HEAD
 delta arquivo.diff
 ```
+
+#### lazygit
+
+TUI para usar Git no terminal. Também é integrada pelo LazyVim.
+
+```bash
+lazygit
+lazygit -p /caminho/do/repositorio
+```
+
+### Editor de terminal
+
+#### Neovim + LazyVim
+
+Neovim é instalado pela release oficial mais recente. LazyVim é instalado a partir do starter oficial em `~/.config/nvim` quando ainda não existe configuração do Neovim.
+
+```bash
+nvim
+:LazyHealth
+:Lazy
+```
+
+Se `~/.config/nvim` já existir, o setup não sobrescreve sua configuração.
+
+Comandos básicos:
+
+| Comando | O que faz |
+|---|---|
+| `nvim` | Abre o Neovim |
+| `nvim README.md` | Abre um arquivo direto |
+| `nvim .` | Abre a pasta atual como projeto |
+| `<Space>ff` | Busca arquivos |
+| `<Space>fg` | Busca texto no projeto |
+| `<Space>e` | Abre ou fecha o explorer |
+| `<Space>gg` | Abre o lazygit |
+| `:Lazy` | Gerencia plugins |
+| `:Mason` | Gerencia LSPs, formatters e linters |
+| `:LazyHealth` | Verifica a saúde da instalação |
+| `:w` | Salva o arquivo |
+| `:q` | Sai |
+| `:wq` | Salva e sai |
 
 ### Containers
 
