@@ -90,9 +90,10 @@ header "2/5 · Base packages"
 PACKAGES=(
   apt-transport-https ca-certificates curl wget gnupg
   software-properties-common
-  zsh git make tree jq ripgrep
+  zsh git make tree jq ripgrep fzf bat fd-find direnv shfmt
   python3 python3-pip pipx
   gcc unzip fuse
+  age
   htop net-tools iproute2 dnsutils
 )
 
@@ -174,6 +175,25 @@ else
   skip "pre-commit already installed ($(pre-commit --version)), skipping..."
 fi
 
+# — Node.js LTS
+if ! command -v node &>/dev/null; then
+  info "Installing Node.js LTS..."
+  curl -fsSL https://deb.nodesource.com/setup_lts.x | sudo -E bash -
+  sudo apt-get install -y nodejs -qq
+  log "Node.js $(node --version) installed"
+else
+  skip "Node.js already installed ($(node --version)), skipping..."
+fi
+
+# — markdownlint-cli2
+if ! command -v markdownlint-cli2 &>/dev/null; then
+  info "Installing markdownlint-cli2..."
+  sudo npm install -g markdownlint-cli2
+  log "markdownlint-cli2 installed"
+else
+  skip "markdownlint-cli2 already installed, skipping..."
+fi
+
 # — xh
 if ! command -v xh &>/dev/null; then
   info "Installing xh..."
@@ -198,6 +218,48 @@ if ! command -v sops &>/dev/null; then
   log "sops ${SOPS_VERSION} installed"
 else
   skip "sops already installed ($(sops --version)), skipping..."
+fi
+
+# — GitHub CLI
+if ! command -v gh &>/dev/null; then
+  info "Installing GitHub CLI..."
+  GH_VERSION=$(curl -fsSL https://api.github.com/repos/cli/cli/releases/latest \
+    | jq -r '.tag_name' | sed 's/^v//')
+  curl -fsSL "https://github.com/cli/cli/releases/download/v${GH_VERSION}/gh_${GH_VERSION}_linux_amd64.tar.gz" \
+    | tar -xz -C /tmp
+  sudo install -o root -g root -m 0755 "/tmp/gh_${GH_VERSION}_linux_amd64/bin/gh" /usr/local/bin/gh
+  rm -rf "/tmp/gh_${GH_VERSION}_linux_amd64"
+  log "GitHub CLI $(gh --version | head -n1) installed"
+else
+  skip "GitHub CLI already installed ($(gh --version | head -n1)), skipping..."
+fi
+
+# — eza
+if ! command -v eza &>/dev/null; then
+  info "Installing eza..."
+  EZA_VERSION=$(curl -fsSL https://api.github.com/repos/eza-community/eza/releases/latest \
+    | jq -r '.tag_name')
+  curl -fsSL "https://github.com/eza-community/eza/releases/download/${EZA_VERSION}/eza_x86_64-unknown-linux-gnu.tar.gz" \
+    | tar -xz -C /tmp eza
+  sudo install -o root -g root -m 0755 /tmp/eza /usr/local/bin/eza
+  rm /tmp/eza
+  log "eza $(eza --version | head -n1) installed"
+else
+  skip "eza already installed ($(eza --version | head -n1)), skipping..."
+fi
+
+# — yq
+if ! command -v yq &>/dev/null; then
+  info "Installing yq..."
+  YQ_VERSION=$(curl -fsSL https://api.github.com/repos/mikefarah/yq/releases/latest \
+    | jq -r '.tag_name')
+  curl -fsSLo /tmp/yq \
+    "https://github.com/mikefarah/yq/releases/download/${YQ_VERSION}/yq_linux_amd64"
+  sudo install -o root -g root -m 0755 /tmp/yq /usr/local/bin/yq
+  rm /tmp/yq
+  log "yq $(yq --version) installed"
+else
+  skip "yq already installed ($(yq --version)), skipping..."
 fi
 
 # — kubectl
@@ -261,16 +323,19 @@ else
   skip "Terraform already installed, skipping..."
 fi
 
-# — AWS CLI v2
-if ! command -v aws &>/dev/null; then
-  info "Installing AWS CLI v2..."
-  curl -fsSL "https://awscli.amazonaws.com/awscli-exe-linux-x86_64.zip" -o /tmp/awscliv2.zip
-  unzip -q /tmp/awscliv2.zip -d /tmp/aws-install
-  sudo /tmp/aws-install/aws/install
-  rm -rf /tmp/awscliv2.zip /tmp/aws-install
-  log "AWS CLI $(aws --version 2>&1 | cut -d' ' -f1) installed"
+# — git-delta
+if ! command -v delta &>/dev/null; then
+  info "Installing git-delta..."
+  DELTA_TAG=$(curl -fsSL https://api.github.com/repos/dandavison/delta/releases/latest \
+    | jq -r '.tag_name')
+  DELTA_VERSION="${DELTA_TAG#v}"
+  curl -fsSL "https://github.com/dandavison/delta/releases/download/${DELTA_TAG}/delta-${DELTA_VERSION}-x86_64-unknown-linux-gnu.tar.gz" \
+    | tar -xz -C /tmp
+  sudo install -o root -g root -m 0755 "/tmp/delta-${DELTA_VERSION}-x86_64-unknown-linux-gnu/delta" /usr/local/bin/delta
+  rm -rf "/tmp/delta-${DELTA_VERSION}-x86_64-unknown-linux-gnu"
+  log "git-delta $(delta --version) installed"
 else
-  skip "AWS CLI already installed, skipping..."
+  skip "git-delta already installed ($(delta --version)), skipping..."
 fi
 
 # =============================================================================
@@ -352,6 +417,34 @@ if ! command -v kubeconform &>/dev/null; then
 else
   skip "kubeconform already installed, skipping..."
 fi
+
+# — actionlint (GitHub Actions)
+if ! command -v actionlint &>/dev/null; then
+  info "Installing actionlint..."
+  ACTIONLINT_VERSION=$(curl -fsSL https://api.github.com/repos/rhysd/actionlint/releases/latest \
+    | jq -r '.tag_name')
+  curl -fsSL "https://github.com/rhysd/actionlint/releases/download/${ACTIONLINT_VERSION}/actionlint_${ACTIONLINT_VERSION#v}_linux_amd64.tar.gz" \
+    | tar -xz -C /tmp actionlint
+  sudo install -o root -g root -m 0755 /tmp/actionlint /usr/local/bin/actionlint
+  rm /tmp/actionlint
+  log "actionlint $(actionlint --version) installed"
+else
+  skip "actionlint already installed ($(actionlint --version)), skipping..."
+fi
+
+# — terraform-docs
+if ! command -v terraform-docs &>/dev/null; then
+  info "Installing terraform-docs..."
+  TERRAFORM_DOCS_VERSION=$(curl -fsSL https://api.github.com/repos/terraform-docs/terraform-docs/releases/latest \
+    | jq -r '.tag_name')
+  curl -fsSL "https://github.com/terraform-docs/terraform-docs/releases/download/${TERRAFORM_DOCS_VERSION}/terraform-docs-${TERRAFORM_DOCS_VERSION}-linux-amd64.tar.gz" \
+    | tar -xz -C /tmp terraform-docs
+  sudo install -o root -g root -m 0755 /tmp/terraform-docs /usr/local/bin/terraform-docs
+  rm /tmp/terraform-docs
+  log "terraform-docs $(terraform-docs --version) installed"
+else
+  skip "terraform-docs already installed ($(terraform-docs --version)), skipping..."
+fi
 header "5/5 · Environment setup"
 
 # — Default shell
@@ -421,7 +514,6 @@ plugins=(
   python
   kubectl
   terraform
-  aws
   zsh-autosuggestions
   zsh-syntax-highlighting
 )
@@ -431,9 +523,15 @@ source $ZSH/oh-my-zsh.sh
 # PATH
 export PATH="$HOME/.local/bin:$HOME/.cargo/bin:/usr/local/go/bin:$PATH"
 export PIPX_HOME="$HOME/.local/pipx"
+export SOPS_AGE_KEY_FILE="$HOME/.config/sops/age/keys.txt"
 
 # Aliases — geral
 alias ll='ls -lah'
+alias cat='batcat --paging=never'
+alias fd='fdfind'
+alias ls='eza --group-directories-first'
+alias la='eza -la --group-directories-first'
+alias lt='eza --tree --level=2 --group-directories-first'
 
 # Aliases — git
 alias gs='git status'
@@ -461,6 +559,13 @@ alias tfd='terraform destroy'
 # uv autocompletion
 eval "$(uv generate-shell-completion zsh)"
 
+# direnv
+eval "$(direnv hook zsh)"
+
+# fzf keybindings/completion (Debian/Ubuntu package layout)
+[ -f /usr/share/doc/fzf/examples/key-bindings.zsh ] && source /usr/share/doc/fzf/examples/key-bindings.zsh
+[ -f /usr/share/doc/fzf/examples/completion.zsh ] && source /usr/share/doc/fzf/examples/completion.zsh
+
 # p10k
 [[ ! -f ~/.p10k.zsh ]] || source ~/.p10k.zsh
 ZSHRC
@@ -473,9 +578,12 @@ git config --global pull.rebase false              # merge ao invés de rebase n
 git config --global core.autocrlf input            # normaliza line endings (importante no WSL)
 git config --global core.editor "code --wait"      # VS Code as default editor
 git config --global advice.defaultBranchName false # silencia o aviso do branch name
+git config --global core.pager "delta"             # pretty diffs
+git config --global interactive.diffFilter "delta --color-only"
+git config --global delta.navigate true
+git config --global delta.side-by-side true
 log "git configured"
 
-# — Backup SSH
 WIN_USER=$(cmd.exe /c "echo %USERNAME%" 2>/dev/null | tr -d '\r')
 
 # — .wslconfig com mirrored networking (resolve compatibilidade com VPN/Boundary)
@@ -493,19 +601,6 @@ WSLCFG
 else
   skip ".wslconfig already configured, skipping..."
 fi
-SSH_BACKUP_DIR="/mnt/c/Users/${WIN_USER}/.ssh-backup-wsl"
-
-if [ -d "$HOME/.ssh" ] && [ -n "$(ls -A "$HOME/.ssh" 2>/dev/null)" ]; then
-  info "Backing up SSH keys..."
-  mkdir -p "$SSH_BACKUP_DIR"
-  find "$HOME/.ssh" -maxdepth 1 -type f -exec cp {} "$SSH_BACKUP_DIR/" \;
-  chmod 700 "$SSH_BACKUP_DIR"
-  chmod 600 "$SSH_BACKUP_DIR"/* 2>/dev/null || true
-  log "SSH backup saved to: C:\\Users\\${WIN_USER}\\.ssh-backup-wsl"
-else
-  warn "No SSH keys found in ~/.ssh — backup skipped"
-fi
-
 # — VS Code
 if command -v code &>/dev/null; then
   info "Installing Remote WSL extension..."

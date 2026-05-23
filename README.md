@@ -99,24 +99,21 @@ docker ps   # deve funcionar sem sudo após reabrir
 | Tema VS Code | Dracula Pro (se `.vsix` presente) ou Dracula gratuito |
 | Extensão VS Code | Remote WSL instalada automaticamente |
 | Grupo docker | Usuário adicionado (efetiva após logout/login) |
-| Backup SSH | Chaves copiadas para `C:\Users\<user>\.ssh-backup-wsl` |
 | Mirrored networking | `.wslconfig` configurado para compatibilidade com VPN e Boundary |
 
 ---
 
 ## Ferramentas instaladas
 
-### 🐚 Shell
+### Terminal e shell
 
 #### zsh + oh-my-zsh + powerlevel10k
 
-O zsh é o shell principal. O oh-my-zsh adiciona plugins e temas. O powerlevel10k é o tema visual — mostra branch git, status do último comando, versão do Python/Node, etc.
-
-Na primeira vez que abrir o terminal após o setup:
+O zsh é o shell principal. O oh-my-zsh adiciona plugins e temas. O powerlevel10k é o tema visual do terminal.
 
 ```bash
-exec zsh   # inicia o wizard de configuração visual do powerlevel10k
-p10k configure   # reconfigura o tema a qualquer momento
+exec zsh        # inicia o wizard do powerlevel10k na primeira vez
+p10k configure  # reconfigura o visual depois
 ```
 
 Plugins ativos:
@@ -127,12 +124,50 @@ Plugins ativos:
 | `docker` | Autocomplete para docker |
 | `docker-compose` | Autocomplete para docker compose |
 | `kubectl` | Autocomplete para kubectl |
+| `terraform` | Autocomplete e aliases para Terraform |
 | `zsh-autosuggestions` | Sugere comandos enquanto você digita |
-| `zsh-syntax-highlighting` | Colore o comando (verde = válido, vermelho = inválido) |
+| `zsh-syntax-highlighting` | Colore comandos válidos e inválidos |
 
----
+### Linguagens e runtimes
 
-### 📝 Controle de versão
+#### Go
+
+Instalado via site oficial. Útil para compilar ferramentas DevOps e desenvolver CLIs.
+
+```bash
+go version
+go run main.go
+go build -o meu-binario
+go install github.com/algum/pacote@latest
+go mod init meu-projeto
+go mod tidy
+```
+
+#### Node.js + npm
+
+Node.js LTS é instalado para suportar ferramentas distribuídas via npm, como `markdownlint-cli2`.
+
+```bash
+node --version
+npm --version
+npm install -g pacote-cli
+```
+
+#### Python + uv + pipx
+
+Python vem com `pip`, `pipx` e `uv`. Use `uv` para projetos e `pipx` para instalar CLIs Python isoladas.
+
+```bash
+uv init meu-projeto
+uv add requests
+uv add --dev pytest
+uv run python script.py
+uv sync
+pipx install black
+pipx list
+```
+
+### Git e GitHub
 
 #### git
 
@@ -140,18 +175,17 @@ Plugins ativos:
 gs              # git status
 gc -m "msg"     # git commit
 gp              # git push
+git diff        # usa git-delta automaticamente
 ```
 
 #### pre-commit
 
-Intercepta cada `git commit` e roda verificações automáticas. Se algo estiver errado, o commit é bloqueado até você corrigir.
-
-> **Importante:** rode `pre-commit install` uma vez dentro de cada repositório que quiser proteger.
+Intercepta commits e roda verificações automáticas no repositório.
 
 ```bash
-pre-commit install            # ativa os hooks neste repositório
-pre-commit run --all-files    # roda as verificações manualmente sem commitar
-pre-commit autoupdate         # atualiza as versões dos hooks
+pre-commit install
+pre-commit run --all-files
+pre-commit autoupdate
 ```
 
 Exemplo de `.pre-commit-config.yaml`:
@@ -169,135 +203,108 @@ repos:
       - id: check-large-files
 ```
 
----
+#### GitHub CLI (`gh`)
 
-### 🐹 Go
-
-Instalado via site oficial sempre na versão estável mais recente. Essencial para DevOps — Docker, kubectl, kind e a maioria das ferramentas da stack são escritas em Go.
+CLI oficial do GitHub. Dá para consultar repositórios públicos sem login, mas o uso completo exige `gh auth login`.
 
 ```bash
-go version
-go run main.go           # roda um arquivo Go diretamente
-go build -o meu-binario  # compila o projeto
-go install github.com/algum/pacote@latest  # instala uma ferramenta Go globalmente
-go mod init meu-projeto  # inicia um novo módulo
-go mod tidy              # sincroniza dependências
+gh auth login
+gh repo clone org/projeto
+gh pr list
+gh pr checkout 123
+gh run list
 ```
 
----
+#### git-delta
 
-### 🐍 Python
-
-#### uv
-
-Gerenciador moderno de projetos e ambientes virtuais Python. Substitui o `python -m venv` + `pip install`.
+Melhora a leitura de diffs do git com cores, syntax highlight e modo lado a lado.
 
 ```bash
-uv init meu-projeto          # cria um novo projeto
-uv add requests              # adiciona dependência (salva no pyproject.toml)
-uv add --dev pytest          # dependência só de desenvolvimento
-uv run python script.py      # roda dentro do ambiente virtual do projeto
-uv sync                      # instala todas as dependências do pyproject.toml
+git diff
+git show HEAD
+delta arquivo.diff
 ```
 
-#### pip
+### Containers
 
-```bash
-pip install requests
-pip install -r requirements.txt
-pip freeze > requirements.txt
-```
-
-#### pipx
-
-Instala ferramentas CLI Python em ambientes isolados, sem misturar com o sistema.
-
-```bash
-pipx install black            # instala de forma isolada
-pipx list                     # lista ferramentas instaladas
-pipx upgrade-all              # atualiza tudo
-pipx uninstall black          # desinstala
-```
-
----
-
-
-### 🏗️ Infraestrutura
-
-#### Terraform
-
-Cria e gerencia infraestrutura em cloud usando arquivos `.tf`. Você descreve o que quer ter e o Terraform descobre o que precisa criar, alterar ou destruir.
-
-```bash
-tf               # terraform
-tfi              # terraform init — inicializa o projeto, baixa os providers — rode sempre ao clonar
-tfp              # terraform plan — mostra o que será criado/alterado/destruído sem executar nada
-tfa              # terraform apply — aplica as mudanças (pede confirmação)
-tfd              # terraform destroy — destrói toda a infraestrutura gerenciada
-terraform fmt        # formata os arquivos .tf
-terraform validate   # valida a sintaxe sem precisar de credenciais cloud
-terraform state list # lista recursos no state
-```
-
-#### AWS CLI
-
-Interface de linha de comando para interagir com os serviços da AWS.
-
-```bash
-aws configure                                      # configura credenciais
-aws sts get-caller-identity                        # confirma qual usuário/role está ativo
-aws s3 ls                                          # lista buckets S3
-aws s3 cp arquivo.txt s3://meu-bucket/             # upload de arquivo
-aws ec2 describe-instances                         # lista instâncias EC2
-aws logs tail /aws/lambda/minha-funcao --follow    # logs em tempo real
-```
-
----
-
-### 🐳 Docker
+#### Docker
 
 ```bash
 dcu                            # docker compose up -d
 dcd                            # docker compose down
 dcl                            # docker compose logs -f
-docker ps                      # containers rodando
-docker ps -a                   # todos, incluindo parados
-docker images                  # imagens locais
-docker exec -it <id> bash      # shell dentro do container
-docker system prune -af        # limpa tudo que não está em uso
+docker ps
+docker ps -a
+docker images
+docker exec -it <id> bash
+docker system prune -af
 ```
 
----
+### Infraestrutura como código
 
-### ☸️ Kubernetes
+#### Terraform
+
+Cria e gerencia infraestrutura usando arquivos `.tf`.
+
+```bash
+tf                    # terraform
+tfi                   # terraform init
+tfp                   # terraform plan
+tfa                   # terraform apply
+tfd                   # terraform destroy
+terraform fmt
+terraform validate
+terraform state list
+```
+
+#### terraform-docs
+
+Gera documentação automática para módulos Terraform.
+
+```bash
+terraform-docs markdown table .
+terraform-docs markdown table --output-file README.md .
+```
+
+#### tflint
+
+Linter para Terraform.
+
+```bash
+tflint
+tflint --init
+tflint --recursive
+```
+
+### Kubernetes local
 
 #### kubectl
 
 ```bash
-kgp                              # kubectl get pods
-kgs                              # kubectl get svc
-kgn                              # kubectl get nodes
-kubectl apply -f manifest.yaml   # aplica um manifest no cluster
-kubectl delete -f manifest.yaml  # remove os recursos do manifest
-kubectl logs -f <pod>            # logs em tempo real
-kubectl exec -it <pod> -- bash   # shell dentro do pod
-kubectl port-forward svc/meu-svc 8080:80  # redireciona porta do cluster para localhost
-kubectl describe pod <pod>       # detalhes e eventos — útil para debugar
+kgp
+kgs
+kgn
+kubectl apply -f manifest.yaml
+kubectl delete -f manifest.yaml
+kubectl logs -f <pod>
+kubectl exec -it <pod> -- bash
+kubectl port-forward svc/meu-svc 8080:80
+kubectl describe pod <pod>
 ```
 
-#### kind — Kubernetes IN Docker
+#### kind
 
-Cria clusters Kubernetes locais usando containers Docker. Ideal para desenvolvimento e testes sem precisar de cloud.
+Cria clusters Kubernetes locais usando containers Docker.
 
 ```bash
-kind create cluster --name dev                     # cria um cluster
-kind create cluster --name dev --config kind.yaml  # com configuração customizada
-kind get clusters                                   # lista os clusters
-kind delete cluster --name dev                     # remove o cluster
-kind load docker-image minha-imagem:tag            # carrega imagem local no cluster
+kind create cluster --name dev
+kind create cluster --name dev --config kind.yaml
+kind get clusters
+kind delete cluster --name dev
+kind load docker-image minha-imagem:tag
 ```
 
-Exemplo de `kind.yaml` com 2 workers:
+Exemplo de `kind.yaml`:
 
 ```yaml
 kind: Cluster
@@ -310,137 +317,115 @@ nodes:
 
 #### Helm
 
-Gerenciador de pacotes para Kubernetes. Instala aplicações no cluster usando charts prontos e configuráveis.
+Gerenciador de pacotes para Kubernetes.
 
 ```bash
 helm repo add bitnami https://charts.bitnami.com/bitnami
-helm repo update                              # atualiza a lista de charts
-helm search repo nginx                        # busca charts
-helm install meu-nginx bitnami/nginx          # instala um chart
+helm repo update
+helm search repo nginx
+helm install meu-nginx bitnami/nginx
 helm upgrade meu-nginx bitnami/nginx --set replicaCount=2
-helm list                                     # lista instalações
-helm uninstall meu-nginx                      # remove
-helm template meu-app ./chart                 # renderiza manifests sem instalar
+helm list
+helm uninstall meu-nginx
+helm template meu-app ./chart
 ```
 
 #### k9s
 
-TUI interativa para gerenciar clusters Kubernetes direto no terminal.
+TUI interativa para gerenciar clusters Kubernetes.
 
 ```bash
-k9s                              # abre com o contexto atual do kubectl
-k9s --context outro-cluster      # abre em cluster específico
-k9s --namespace production       # filtra por namespace
+k9s
+k9s --context outro-cluster
+k9s --namespace production
 ```
 
-| Atalho | O que faz |
-|---|---|
-| `:pod` | Lista pods |
-| `:svc` | Lista services |
-| `:deploy` | Lista deployments |
-| `l` | Logs do recurso selecionado |
-| `e` | Edita o recurso |
-| `d` | Describe o recurso |
-| `ctrl+d` | Deleta o recurso |
-| `/` | Filtra por nome |
-| `?` | Ajuda |
+### Segredos
 
+#### sops + age
 
-### 🔐 Segredos
-
-#### sops
-
-Encripta arquivos de secrets para que possam ser versionados no git com segurança. Mantém a estrutura YAML/JSON legível — você vê os campos mas não os valores.
+Encripta arquivos de secrets para versionar no git com segurança. O setup usa `age` como caminho local e mantém exemplo de AWS KMS para produção.
 
 ```bash
-# Encripta um arquivo com AWS KMS
+mkdir -p ~/.config/sops/age
+age-keygen -o ~/.config/sops/age/keys.txt
+sops --age age1xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx secrets.yaml
+
+# Exemplo produtivo opcional: requer AWS CLI/credenciais configuradas fora deste setup
 sops --kms arn:aws:kms:us-east-1:123456789:key/xxx secrets.yaml
 
-# Edita o arquivo encriptado diretamente
 sops secrets.yaml
-
-# Decripta para stdout
 sops -d secrets.yaml
 ```
 
----
+### Qualidade, lint e segurança
 
-### 🔍 Linters
-
-#### shellcheck
-
-Analisa scripts bash/sh e aponta erros, más práticas e problemas de portabilidade.
+#### Shell: shellcheck + shfmt
 
 ```bash
-shellcheck script.sh               # analisa um script
-shellcheck -x script.sh            # segue os `source` para analisar arquivos incluídos
-shellcheck -S error script.sh      # mostra só erros, ignora avisos
+shellcheck script.sh
+shellcheck -x script.sh
+shfmt -w script.sh
+shfmt -d .
 ```
 
-#### yamllint
-
-Valida sintaxe e estilo de arquivos YAML — Kubernetes, Docker Compose, GitHub Actions, etc.
+#### YAML: yamllint + yq
 
 ```bash
-yamllint arquivo.yaml              # valida um arquivo
-yamllint .                         # valida todos os YAMLs do diretório atual
-yamllint -d relaxed arquivo.yaml   # usa regras mais permissivas
+yamllint arquivo.yaml
+yamllint .
+yq '.metadata.name' manifest.yaml
+yq -i '.spec.replicas = 3' deployment.yaml
 ```
 
-#### ruff
-
-Linter e formatter para Python. Substitui `flake8`, `black` e `isort` em um único comando, muito mais rápido que os três juntos.
+#### Python: ruff
 
 ```bash
-ruff check .                       # analisa todos os arquivos Python
-ruff check --fix .                 # corrige automaticamente o que for possível
-ruff format .                      # formata os arquivos (equivale ao black)
-ruff check --select I --fix .      # ordena imports (equivale ao isort)
+ruff check .
+ruff check --fix .
+ruff format .
+ruff check --select I --fix .
 ```
 
-#### tflint
-
-Linter para Terraform. Pega erros que o `terraform validate` não detecta, como tipos de instância inválidos ou variáveis não declaradas.
+#### Dockerfile: hadolint
 
 ```bash
-tflint                             # analisa o diretório atual
-tflint --init                      # instala plugins de providers (AWS, GCP, Azure)
-tflint --recursive                 # analisa todos os módulos recursivamente
+hadolint Dockerfile
+hadolint --ignore DL3008 Dockerfile
 ```
 
-#### trivy
-
-Scanner de segurança para imagens Docker, código IaC (Terraform, Kubernetes) e sistemas de arquivos.
+#### Kubernetes: kubeconform
 
 ```bash
-trivy image nginx:latest           # escaneia uma imagem Docker
-trivy fs .                         # escaneia o diretório atual (IaC, dependências)
-trivy config .                     # analisa só arquivos de configuração IaC
-trivy image --severity HIGH,CRITICAL nginx:latest  # filtra por severidade
+kubeconform manifest.yaml
+kubeconform -summary .
+kubeconform -kubernetes-version 1.29.0 manifest.yaml
 ```
 
-#### hadolint
-
-Linter para Dockerfile. Sugere boas práticas e aponta problemas comuns.
+#### GitHub Actions: actionlint
 
 ```bash
-hadolint Dockerfile                # analisa um Dockerfile
-hadolint --ignore DL3008 Dockerfile  # ignora uma regra específica
+actionlint
+actionlint .github/workflows/ci.yml
 ```
 
-#### kubeconform
-
-Valida manifests Kubernetes contra o schema oficial. Mais rápido e mantido que o `kubeval`.
+#### Markdown: markdownlint-cli2
 
 ```bash
-kubeconform manifest.yaml          # valida um manifest
-kubeconform -summary .             # valida todos os YAMLs e mostra resumo
-kubeconform -kubernetes-version 1.29.0 manifest.yaml  # valida contra versão específica
+markdownlint-cli2 README.md
+markdownlint-cli2 "**/*.md"
 ```
 
----
+#### Segurança: trivy
 
-### 🔧 Utilitários
+```bash
+trivy image nginx:latest
+trivy fs .
+trivy config .
+trivy image --severity HIGH,CRITICAL nginx:latest
+```
+
+### Utilitários de terminal
 
 #### ripgrep (`rg`)
 
@@ -462,6 +447,65 @@ Processa e extrai dados de JSON no terminal.
 cat data.json | jq '.'                    # pretty print
 cat data.json | jq '.nome'                # extrai campo
 cat data.json | jq '.items[] | .nome'     # itera array
+```
+
+#### yq
+
+Processa YAML, JSON e outros formatos estruturados direto no terminal. Muito útil para Kubernetes, Helm e GitHub Actions.
+
+```bash
+yq '.metadata.name' manifest.yaml
+yq '.services.web.image' docker-compose.yaml
+yq -i '.spec.replicas = 3' deployment.yaml
+```
+
+#### fzf
+
+Busca interativa para arquivos, histórico e qualquer lista enviada por pipe.
+
+```bash
+fzf                              # seleciona arquivos interativamente
+history | fzf                    # busca no histórico
+git branch | fzf                 # escolhe uma branch visualmente
+```
+
+#### bat
+
+Alternativa ao `cat` com syntax highlight. No Ubuntu/Debian o binário vem como `batcat`; o setup cria alias `cat='batcat --paging=never'`.
+
+```bash
+batcat README.md
+cat README.md                    # usa batcat via alias no zsh
+```
+
+#### eza
+
+Alternativa moderna ao `ls`, com melhor visualização de diretórios e árvores. O setup configura `ls`, `la` e `lt` como aliases.
+
+```bash
+ls                               # eza --group-directories-first
+la                               # eza -la
+lt                               # árvore em até 2 níveis
+```
+
+#### fd
+
+Alternativa simples e rápida ao `find`. No Ubuntu/Debian o binário vem como `fdfind`; o setup cria alias `fd='fdfind'`.
+
+```bash
+fd Dockerfile
+fd -e yaml
+fd main src/
+```
+
+#### direnv
+
+Carrega variáveis de ambiente automaticamente por diretório. Ideal para projetos com Terraform, Kubernetes local e stacks Docker.
+
+```bash
+echo 'export ENV=dev' > .envrc
+direnv allow
+echo "$ENV"
 ```
 
 #### xh
