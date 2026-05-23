@@ -48,7 +48,6 @@ echo ""
 # CORES E FUNÇÕES
 # =============================================================================
 
-RED='\033[0;31m'
 GREEN='\033[0;32m'
 YELLOW='\033[1;33m'
 CYAN='\033[0;36m'
@@ -62,6 +61,10 @@ warn()   { echo -e "${YELLOW}[!]${NC} $1"; }
 header() { echo -e "\n${BOLD}${CYAN}╔══════════════════════════════════════╗${NC}"; \
            echo -e "${BOLD}${CYAN}║  $1$(printf '%*s' $((36 - ${#1})) '')║${NC}"; \
            echo -e "${BOLD}${CYAN}╚══════════════════════════════════════╝${NC}\n"; }
+
+github_latest_tag() {
+  curl -fsSL "https://api.github.com/repos/$1/releases/latest" | jq -r '.tag_name'
+}
 
 # Request sudo once and keep cache alive throughout the script
 
@@ -114,13 +117,13 @@ header "3/5 · Docker"
 if ! command -v docker &>/dev/null; then
   info "Adding Docker repository..."
   sudo install -m 0755 -d /etc/apt/keyrings
-  curl -fsSL https://download.docker.com/linux/ubuntu/gpg \
+  curl -fsSL "https://download.docker.com/linux/${DISTRO_ID}/gpg" \
     | sudo gpg --dearmor -o /etc/apt/keyrings/docker.gpg
   sudo chmod a+r /etc/apt/keyrings/docker.gpg
   echo \
     "deb [arch=$(dpkg --print-architecture) signed-by=/etc/apt/keyrings/docker.gpg] \
-    https://download.docker.com/linux/ubuntu \
-    $(. /etc/os-release && echo "$VERSION_CODENAME") stable" \
+    https://download.docker.com/linux/${DISTRO_ID} \
+    ${VERSION_CODENAME} stable" \
     | sudo tee /etc/apt/sources.list.d/docker.list > /dev/null
   sudo apt-get update -qq
   sudo apt-get install -y -qq \
@@ -147,10 +150,11 @@ if ! /usr/local/go/bin/go version &>/dev/null; then
   info "Installing Go..."
   GO_VERSION=$(curl -fsSL --max-time 10 "https://go.dev/dl/?mode=json" \
     | jq -r '.[0].version' 2>/dev/null)
-  [ -z "$GO_VERSION" ] || [ "$GO_VERSION" = "null" ] && GO_VERSION="go1.24.3"
+  [ -z "$GO_VERSION" ] || [ "$GO_VERSION" = "null" ] && error_exit "Could not resolve latest Go version."
   sudo rm -rf /usr/local/go
   curl -fsSL "https://dl.google.com/go/${GO_VERSION}.linux-amd64.tar.gz" \
     | sudo tar -xz -C /usr/local
+  # shellcheck disable=SC2016
   grep -qxF 'export PATH="$PATH:/usr/local/go/bin"' "$HOME/.profile" \
     || echo 'export PATH="$PATH:/usr/local/go/bin"' >> "$HOME/.profile"
   log "Go $(/usr/local/go/bin/go version) installed"
@@ -197,7 +201,7 @@ fi
 # — xh
 if ! command -v xh &>/dev/null; then
   info "Installing xh..."
-  XH_VERSION="v0.23.0"
+  XH_VERSION=$(github_latest_tag "ducaale/xh")
   curl -fsSL "https://github.com/ducaale/xh/releases/download/${XH_VERSION}/xh-${XH_VERSION}-x86_64-unknown-linux-musl.tar.gz" \
     | tar -xz --strip-components=1 -C /tmp "xh-${XH_VERSION}-x86_64-unknown-linux-musl/xh"
   sudo install -o root -g root -m 0755 /tmp/xh /usr/local/bin/xh
@@ -210,7 +214,7 @@ fi
 # — sops
 if ! command -v sops &>/dev/null; then
   info "Installing sops..."
-  SOPS_VERSION="v3.9.4"
+  SOPS_VERSION=$(github_latest_tag "getsops/sops")
   curl -fsSLo /tmp/sops \
     "https://github.com/getsops/sops/releases/download/${SOPS_VERSION}/sops-${SOPS_VERSION}.linux.amd64"
   sudo install -o root -g root -m 0755 /tmp/sops /usr/local/bin/sops
@@ -223,8 +227,7 @@ fi
 # — GitHub CLI
 if ! command -v gh &>/dev/null; then
   info "Installing GitHub CLI..."
-  GH_VERSION=$(curl -fsSL https://api.github.com/repos/cli/cli/releases/latest \
-    | jq -r '.tag_name' | sed 's/^v//')
+  GH_VERSION=$(github_latest_tag "cli/cli" | sed 's/^v//')
   curl -fsSL "https://github.com/cli/cli/releases/download/v${GH_VERSION}/gh_${GH_VERSION}_linux_amd64.tar.gz" \
     | tar -xz -C /tmp
   sudo install -o root -g root -m 0755 "/tmp/gh_${GH_VERSION}_linux_amd64/bin/gh" /usr/local/bin/gh
@@ -237,10 +240,9 @@ fi
 # — eza
 if ! command -v eza &>/dev/null; then
   info "Installing eza..."
-  EZA_VERSION=$(curl -fsSL https://api.github.com/repos/eza-community/eza/releases/latest \
-    | jq -r '.tag_name')
+  EZA_VERSION=$(github_latest_tag "eza-community/eza")
   curl -fsSL "https://github.com/eza-community/eza/releases/download/${EZA_VERSION}/eza_x86_64-unknown-linux-gnu.tar.gz" \
-    | tar -xz -C /tmp eza
+    | tar -xz --strip-components=1 -C /tmp ./eza
   sudo install -o root -g root -m 0755 /tmp/eza /usr/local/bin/eza
   rm /tmp/eza
   log "eza $(eza --version | head -n1) installed"
@@ -251,8 +253,7 @@ fi
 # — yq
 if ! command -v yq &>/dev/null; then
   info "Installing yq..."
-  YQ_VERSION=$(curl -fsSL https://api.github.com/repos/mikefarah/yq/releases/latest \
-    | jq -r '.tag_name')
+  YQ_VERSION=$(github_latest_tag "mikefarah/yq")
   curl -fsSLo /tmp/yq \
     "https://github.com/mikefarah/yq/releases/download/${YQ_VERSION}/yq_linux_amd64"
   sudo install -o root -g root -m 0755 /tmp/yq /usr/local/bin/yq
@@ -278,7 +279,7 @@ fi
 # — kind
 if ! command -v kind &>/dev/null; then
   info "Installing kind..."
-  KIND_VERSION="v0.27.0"
+  KIND_VERSION=$(github_latest_tag "kubernetes-sigs/kind")
   curl -fsSLo /tmp/kind \
     "https://kind.sigs.k8s.io/dl/${KIND_VERSION}/kind-linux-amd64"
   sudo install -o root -g root -m 0755 /tmp/kind /usr/local/bin/kind
@@ -300,7 +301,7 @@ fi
 # — k9s
 if ! command -v k9s &>/dev/null; then
   info "Installing k9s..."
-  K9S_VERSION="v0.32.7"
+  K9S_VERSION=$(github_latest_tag "derailed/k9s")
   curl -fsSL --max-time 60 "https://github.com/derailed/k9s/releases/download/${K9S_VERSION}/k9s_Linux_amd64.tar.gz" \
     | sudo tar -xz -C /usr/local/bin k9s
   log "k9s ${K9S_VERSION} installed"
@@ -326,8 +327,7 @@ fi
 # — git-delta
 if ! command -v delta &>/dev/null; then
   info "Installing git-delta..."
-  DELTA_TAG=$(curl -fsSL https://api.github.com/repos/dandavison/delta/releases/latest \
-    | jq -r '.tag_name')
+  DELTA_TAG=$(github_latest_tag "dandavison/delta")
   DELTA_VERSION="${DELTA_TAG#v}"
   curl -fsSL "https://github.com/dandavison/delta/releases/download/${DELTA_TAG}/delta-${DELTA_VERSION}-x86_64-unknown-linux-gnu.tar.gz" \
     | tar -xz -C /tmp
@@ -397,7 +397,7 @@ fi
 # — hadolint (Dockerfile)
 if ! command -v hadolint &>/dev/null; then
   info "Installing hadolint..."
-  HADOLINT_VERSION="v2.12.0"
+  HADOLINT_VERSION=$(github_latest_tag "hadolint/hadolint")
   curl -fsSLo /tmp/hadolint \
     "https://github.com/hadolint/hadolint/releases/download/${HADOLINT_VERSION}/hadolint-Linux-x86_64"
   sudo install -o root -g root -m 0755 /tmp/hadolint /usr/local/bin/hadolint
@@ -410,7 +410,7 @@ fi
 # — kubeconform (manifests Kubernetes)
 if ! command -v kubeconform &>/dev/null; then
   info "Installing kubeconform..."
-  KUBECONFORM_VERSION="v0.6.7"
+  KUBECONFORM_VERSION=$(github_latest_tag "yannh/kubeconform")
   curl -fsSL "https://github.com/yannh/kubeconform/releases/download/${KUBECONFORM_VERSION}/kubeconform-linux-amd64.tar.gz" \
     | sudo tar -xz -C /usr/local/bin kubeconform
   log "kubeconform installed"
@@ -421,8 +421,7 @@ fi
 # — actionlint (GitHub Actions)
 if ! command -v actionlint &>/dev/null; then
   info "Installing actionlint..."
-  ACTIONLINT_VERSION=$(curl -fsSL https://api.github.com/repos/rhysd/actionlint/releases/latest \
-    | jq -r '.tag_name')
+  ACTIONLINT_VERSION=$(github_latest_tag "rhysd/actionlint")
   curl -fsSL "https://github.com/rhysd/actionlint/releases/download/${ACTIONLINT_VERSION}/actionlint_${ACTIONLINT_VERSION#v}_linux_amd64.tar.gz" \
     | tar -xz -C /tmp actionlint
   sudo install -o root -g root -m 0755 /tmp/actionlint /usr/local/bin/actionlint
@@ -435,8 +434,7 @@ fi
 # — terraform-docs
 if ! command -v terraform-docs &>/dev/null; then
   info "Installing terraform-docs..."
-  TERRAFORM_DOCS_VERSION=$(curl -fsSL https://api.github.com/repos/terraform-docs/terraform-docs/releases/latest \
-    | jq -r '.tag_name')
+  TERRAFORM_DOCS_VERSION=$(github_latest_tag "terraform-docs/terraform-docs")
   curl -fsSL "https://github.com/terraform-docs/terraform-docs/releases/download/${TERRAFORM_DOCS_VERSION}/terraform-docs-${TERRAFORM_DOCS_VERSION}-linux-amd64.tar.gz" \
     | tar -xz -C /tmp terraform-docs
   sudo install -o root -g root -m 0755 /tmp/terraform-docs /usr/local/bin/terraform-docs
@@ -607,41 +605,84 @@ if command -v code &>/dev/null; then
   code --install-extension ms-vscode-remote.remote-wsl 2>/dev/null
   log "Remote WSL installed"
 
-  SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-  VSIX_PATH="$SCRIPT_DIR/dracula-pro.vsix"
-  if [ -f "$VSIX_PATH" ]; then
-    info "Installing Dracula Pro..."
-    code --install-extension "$VSIX_PATH" 2>/dev/null
-    log "Dracula Pro installed — activate via: Ctrl+Shift+P → Color Theme → Dracula Pro"
-  else
-    info "Installing Dracula (free)..."
-    code --install-extension dracula-theme.theme-dracula 2>/dev/null
-    log "Dracula installed — activate via: Ctrl+Shift+P → Color Theme → Dracula"
-  fi
+  info "Installing Dracula theme..."
+  code --install-extension dracula-theme.theme-dracula 2>/dev/null
+  VSCODE_COLOR_THEME="Dracula Theme"
+  log "Dracula installed"
 
   # — Configure VS Code integrated terminal font to MesloLGS NF
   VSCODE_SETTINGS="/mnt/c/Users/${WIN_USER}/AppData/Roaming/Code/User/settings.json"
   if [ -f "$VSCODE_SETTINGS" ]; then
     info "Configuring VS Code integrated terminal font..."
     cp "$VSCODE_SETTINGS" "${VSCODE_SETTINGS}.bak"
-    python3 - "$VSCODE_SETTINGS" << 'PYEOF'
-import sys, json
+    python3 - "$VSCODE_SETTINGS" "$VSCODE_COLOR_THEME" << 'PYEOF'
+import json
+import re
+import sys
 
 settings_path = sys.argv[1]
 
+def strip_jsonc(content):
+    result = []
+    in_string = False
+    escaped = False
+    i = 0
+
+    while i < len(content):
+        char = content[i]
+        next_char = content[i + 1] if i + 1 < len(content) else ""
+
+        if in_string:
+            result.append(char)
+            if escaped:
+                escaped = False
+            elif char == "\\":
+                escaped = True
+            elif char == '"':
+                in_string = False
+            i += 1
+            continue
+
+        if char == '"':
+            in_string = True
+            result.append(char)
+            i += 1
+            continue
+
+        if char == "/" and next_char == "/":
+            i += 2
+            while i < len(content) and content[i] not in "\r\n":
+                i += 1
+            continue
+
+        if char == "/" and next_char == "*":
+            i += 2
+            while i + 1 < len(content) and not (content[i] == "*" and content[i + 1] == "/"):
+                i += 1
+            i += 2
+            continue
+
+        result.append(char)
+        i += 1
+
+    return re.sub(r",(\s*[}\]])", r"\1", "".join(result))
+
 try:
     with open(settings_path, "r", encoding="utf-8") as f:
-        settings = json.load(f)
+        settings = json.loads(strip_jsonc(f.read()))
 except json.JSONDecodeError:
     settings = {}
 
 settings["terminal.integrated.fontFamily"] = "MesloLGS NF"
 settings["terminal.integrated.fontSize"] = 14
+color_theme = sys.argv[2] if len(sys.argv) > 2 else ""
+if color_theme:
+    settings["workbench.colorTheme"] = color_theme
 
 with open(settings_path, "w", encoding="utf-8") as f:
     json.dump(settings, f, indent=4, ensure_ascii=False)
 PYEOF
-    log "MesloLGS NF font configured in VS Code terminal"
+    log "VS Code settings configured"
   else
     warn "VS Code settings.json not found — configure manually:"
     warn "  terminal.integrated.fontFamily: MesloLGS NF"

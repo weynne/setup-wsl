@@ -36,8 +36,7 @@ Crie uma pasta chamada `setup_wsl` em qualquer lugar no Windows (ex: `C:\Users\<
 
 ```
 📁 setup_wsl\
-├── setup-wsl.sh
-└── dracula-pro.vsix   ← opcional (Pro pago); sem ele instala o Dracula gratuito
+└── setup-wsl.sh
 ```
 
 ---
@@ -96,7 +95,7 @@ docker ps   # deve funcionar sem sudo após reabrir
 | Tema Windows Terminal | Moonlight II injetado direto no settings.json |
 | Fonte Windows Terminal | MesloLGS NF instalada via PowerShell, sem admin |
 | Perfil Ubuntu no Terminal | Fonte e tema já apontados para os corretos |
-| Tema VS Code | Dracula Pro (se `.vsix` presente) ou Dracula gratuito |
+| Tema VS Code | Dracula gratuito instalado e ativado automaticamente |
 | Extensão VS Code | Remote WSL instalada automaticamente |
 | Grupo docker | Usuário adicionado (efetiva após logout/login) |
 | Mirrored networking | `.wslconfig` configurado para compatibilidade com VPN e Boundary |
@@ -104,6 +103,8 @@ docker ps   # deve funcionar sem sudo após reabrir
 ---
 
 ## Ferramentas instaladas
+
+As ferramentas instaladas por releases externas ou instaladores oficiais usam a versão estável mais recente disponível no momento da execução. Pacotes instalados via `apt` usam a versão disponível nos repositórios configurados da distro.
 
 ### Terminal e shell
 
