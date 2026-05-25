@@ -18,13 +18,13 @@ Reinicie o computador quando solicitado. Na primeira abertura do WSL, crie seu u
 
 ---
 
-### Passo 2 — Instale o VS Code no Windows
+### Passo 2 — Instale o VS Code no Windows (Se ainda não tiver)
 
 Baixe em [code.visualstudio.com](https://code.visualstudio.com) e durante a instalação marque a opção **"Add to PATH"**. Isso é necessário para o script instalar as extensões automaticamente.
 
 ---
 
-### Passo 3 — Instale o Windows Terminal (se ainda não tiver)
+### Passo 3 — Instale o Windows Terminal (Se ainda não tiver)
 
 Baixe na [Microsoft Store](https://aka.ms/terminal). O script configura o tema Moonlight II e a fonte automaticamente.
 
