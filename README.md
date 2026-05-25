@@ -79,10 +79,10 @@ docker ps   # deve funcionar sem sudo após reabrir
 
 ## Compatibilidade
 
-| Distro | Versão mínima |
+| Distro | Versão |
 |---|---|
-| Ubuntu | 22.04 |
-| Arquitetura | x86_64 apenas |
+| Ubuntu | 22.04+ |
+| Arquitetura | x86_64 |
 
 ---
 
