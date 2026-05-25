@@ -6,7 +6,7 @@ Setup automatizado para WSL (Ubuntu 22.04+) com ferramentas de desenvolvimento e
 
 ## Como usar
 
-### Passo 1 — Instale o WSL no Windows
+### Passo 1 — Instale o WSL no Windows (Se ainda não tiver)
 
 Abra o **PowerShell como administrador** e rode:
 
