@@ -51,13 +51,21 @@ CYAN='\033[0;36m'
 BOLD='\033[1m'
 NC='\033[0m'
 
+WARNINGS=()
+
 log()    { echo -e "${GREEN}[✔]${NC} $1"; }
 info()   { echo -e "${CYAN}[→]${NC} $1"; }
 skip()   { echo -e "${CYAN}[~]${NC} $1"; }
-warn()   { echo -e "${YELLOW}[!]${NC} $1"; }
+warn()   { WARNINGS+=("$1"); echo -e "${YELLOW}[!]${NC} $1"; }
 header() { echo -e "\n${BOLD}${CYAN}╔══════════════════════════════════════╗${NC}"; \
            echo -e "${BOLD}${CYAN}║  $1$(printf '%*s' $((36 - ${#1})) '')║${NC}"; \
            echo -e "${BOLD}${CYAN}╚══════════════════════════════════════╝${NC}\n"; }
+
+backup_file() {
+  local file="$1"
+  [ -f "$file" ] || return 0
+  cp "$file" "$file.bak.$(date +%Y%m%d%H%M%S)"
+}
 
 # Resolve a tag do último release no GitHub. Em caso de falha (rate-limit/rede),
 # devolve string vazia e quem chama decide se aborta ou apenas avisa (warn).
@@ -871,9 +879,12 @@ else
 fi
 
 # — .zshrc
-info "Generating .zshrc..."
-[ -f "$HOME/.zshrc" ] && cp "$HOME/.zshrc" "$HOME/.zshrc.bak.$(date +%Y%m%d%H%M%S)"
-cat > "$HOME/.zshrc" << 'ZSHRC'
+info "Generating managed zsh config..."
+SETUP_WSL_CONFIG_DIR="$HOME/.config/setup-wsl"
+SETUP_WSL_ZSHRC="$SETUP_WSL_CONFIG_DIR/zshrc.zsh"
+mkdir -p "$SETUP_WSL_CONFIG_DIR"
+
+cat > "$SETUP_WSL_ZSHRC" << 'ZSHRC'
 # Powerlevel10k instant prompt
 if [[ -r "${XDG_CACHE_HOME:-$HOME/.cache}/p10k-instant-prompt-${(%):-%n}.zsh" ]]; then
   source "${XDG_CACHE_HOME:-$HOME/.cache}/p10k-instant-prompt-${(%):-%n}.zsh"
@@ -902,7 +913,7 @@ export PIPX_HOME="$HOME/.local/pipx"
 export SOPS_AGE_KEY_FILE="$HOME/.config/sops/age/keys.txt"
 
 # Aliases — geral
-alias ll='ls -lah'
+alias ll='ls -lh'
 alias cat='batcat --paging=never'
 alias fd='fdfind'
 alias ls='eza --group-directories-first'
@@ -951,7 +962,28 @@ command -v zoxide &>/dev/null && eval "$(zoxide init zsh)"
 # p10k
 [[ ! -f ~/.p10k.zsh ]] || source ~/.p10k.zsh
 ZSHRC
-log ".zshrc generated"
+
+ZSHRC_SOURCE_LINE="source \"\$HOME/.config/setup-wsl/zshrc.zsh\""
+if [ ! -f "$HOME/.zshrc" ]; then
+  cat > "$HOME/.zshrc" << 'ZSHRC_MAIN'
+# >>> setup-wsl >>>
+source "$HOME/.config/setup-wsl/zshrc.zsh"
+# <<< setup-wsl <<<
+ZSHRC_MAIN
+  log ".zshrc created and linked to managed config"
+elif grep -qF "$ZSHRC_SOURCE_LINE" "$HOME/.zshrc"; then
+  skip ".zshrc already sources setup-wsl config, skipping..."
+else
+  backup_file "$HOME/.zshrc"
+  cat >> "$HOME/.zshrc" << 'ZSHRC_MAIN'
+
+# >>> setup-wsl >>>
+source "$HOME/.config/setup-wsl/zshrc.zsh"
+# <<< setup-wsl <<<
+ZSHRC_MAIN
+  log ".zshrc backed up and linked to managed config"
+fi
+log "Managed zsh config generated at $SETUP_WSL_ZSHRC"
 
 # — Configurações globais do git
 info "Configuring git..."
@@ -968,26 +1000,69 @@ if command -v delta &>/dev/null; then
 fi
 log "git configured"
 
-WIN_USER=$(cmd.exe /c "echo %USERNAME%" 2>/dev/null | tr -d '\r')
+WIN_USER=$(cmd.exe /c "echo %USERNAME%" 2>/dev/null | tr -d '\r' || true)
+WIN_PROFILE_WIN=$(cmd.exe /c "echo %USERPROFILE%" 2>/dev/null | tr -d '\r' || true)
+WIN_PROFILE=""
 WSLCONFIG_UPDATED=false
 
-if [ -z "$WIN_USER" ]; then
-  warn "Windows username not detected — skipping .wslconfig, VSCode and Windows Terminal setup"
+if [ -n "$WIN_PROFILE_WIN" ] && [ "$WIN_PROFILE_WIN" != "%USERPROFILE%" ]; then
+  WIN_PROFILE=$(wslpath -u "$WIN_PROFILE_WIN" 2>/dev/null || true)
+fi
+
+if [ -z "$WIN_PROFILE" ] && [ -n "$WIN_USER" ] && [ -d "/mnt/c/Users/${WIN_USER}" ]; then
+  WIN_PROFILE="/mnt/c/Users/${WIN_USER}"
+fi
+
+if [ -z "$WIN_PROFILE" ] || [ ! -d "$WIN_PROFILE" ]; then
+  warn "Windows profile path not detected — skipping .wslconfig, VSCode and Windows Terminal setup"
 else
 
 # — .wslconfig com mirrored networking (resolve compatibilidade com VPN/Boundary)
-WSLCONFIG="/mnt/c/Users/${WIN_USER}/.wslconfig"
-if [ ! -f "$WSLCONFIG" ] || ! grep -q "networkingMode=mirrored" "$WSLCONFIG" 2>/dev/null; then
+WSLCONFIG="${WIN_PROFILE}/.wslconfig"
+if [ -f "$WSLCONFIG" ] && grep -Eq '^[[:space:]]*networkingMode[[:space:]]*=[[:space:]]*mirrored[[:space:]]*$' "$WSLCONFIG"; then
+  skip ".wslconfig already configured, skipping..."
+else
   info "Configuring .wslconfig with mirrored networking..."
-  cat >> "$WSLCONFIG" << 'WSLCFG'
+  backup_file "$WSLCONFIG"
+  python3 - "$WSLCONFIG" << 'PYEOF'
+from pathlib import Path
+import re
+import sys
 
-[wsl2]
-networkingMode=mirrored
-WSLCFG
+path = Path(sys.argv[1])
+old = path.read_text(encoding="utf-8") if path.exists() else ""
+lines = old.splitlines()
+
+section_start = None
+networking_idx = None
+in_wsl2 = False
+
+for idx, line in enumerate(lines):
+    stripped = line.strip()
+    if re.match(r"^\[[^\]]+\]$", stripped):
+        in_wsl2 = stripped.lower() == "[wsl2]"
+        if in_wsl2:
+            section_start = idx
+        continue
+
+    if in_wsl2 and re.match(r"^\s*networkingMode\s*=", line):
+        networking_idx = idx
+        break
+
+if section_start is None:
+    if lines and lines[-1].strip():
+        lines.append("")
+    lines.extend(["[wsl2]", "networkingMode=mirrored"])
+elif networking_idx is None:
+    lines.insert(section_start + 1, "networkingMode=mirrored")
+else:
+    lines[networking_idx] = "networkingMode=mirrored"
+
+new = "\n".join(lines) + "\n"
+path.write_text(new, encoding="utf-8")
+PYEOF
   WSLCONFIG_UPDATED=true
   log ".wslconfig configured"
-else
-  skip ".wslconfig already configured, skipping..."
 fi
 
 # — VS Code
@@ -1042,7 +1117,7 @@ if command -v code &>/dev/null; then
   log "VS Code extensions installed"
 
   # — Configure VS Code integrated terminal font to MesloLGS NF
-  VSCODE_SETTINGS="/mnt/c/Users/${WIN_USER}/AppData/Roaming/Code/User/settings.json"
+  VSCODE_SETTINGS="${WIN_PROFILE}/AppData/Roaming/Code/User/settings.json"
   if [ -f "$VSCODE_SETTINGS" ]; then
     info "Configuring VS Code integrated terminal font..."
     cp "$VSCODE_SETTINGS" "${VSCODE_SETTINGS}.bak"
@@ -1123,7 +1198,7 @@ else
 fi
 
 # — Moonlight II theme + font for Windows Terminal
-WT_SETTINGS="/mnt/c/Users/${WIN_USER}/AppData/Local/Packages/Microsoft.WindowsTerminal_8wekyb3d8bbwe/LocalState/settings.json"
+WT_SETTINGS="${WIN_PROFILE}/AppData/Local/Packages/Microsoft.WindowsTerminal_8wekyb3d8bbwe/LocalState/settings.json"
 
 MOONLIGHT_THEME='{
     "name": "Moonlight II",
@@ -1266,16 +1341,29 @@ log "MesloLGS NF fonts installed"
 
 fi  # [ "$FONT_DOWNLOADED" -eq 0 ]
 
-fi  # [ -n "$WIN_USER" ]
+fi  # [ -n "$WIN_PROFILE" ]
 
 # =============================================================================
 # RESUMO FINAL
 # =============================================================================
 echo ""
-echo -e "${BOLD}${GREEN}╔══════════════════════════════════════╗${NC}"
-echo -e "${BOLD}${GREEN}║   Setup completed successfully! 🎉   ║${NC}"
-echo -e "${BOLD}${GREEN}╚══════════════════════════════════════╝${NC}"
+if [ "${#WARNINGS[@]}" -eq 0 ]; then
+  echo -e "${BOLD}${GREEN}╔══════════════════════════════════════╗${NC}"
+  echo -e "${BOLD}${GREEN}║   Setup completed successfully!      ║${NC}"
+  echo -e "${BOLD}${GREEN}╚══════════════════════════════════════╝${NC}"
+else
+  echo -e "${BOLD}${YELLOW}╔══════════════════════════════════════╗${NC}"
+  echo -e "${BOLD}${YELLOW}║   Setup completed with warnings      ║${NC}"
+  echo -e "${BOLD}${YELLOW}╚══════════════════════════════════════╝${NC}"
+fi
 echo ""
+if [ "${#WARNINGS[@]}" -gt 0 ]; then
+  echo -e "${BOLD}${YELLOW}Warnings captured:${NC}"
+  for warning in "${WARNINGS[@]}"; do
+    echo -e "  ${YELLOW}-${NC} $warning"
+  done
+  echo ""
+fi
 echo -e "${BOLD}Next steps:${NC}"
 echo ""
 echo -e "  ${CYAN}1.${NC} Start the Powerlevel10k wizard:"

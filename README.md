@@ -91,6 +91,7 @@ docker ps   # deve funcionar sem sudo após reabrir
 | O que | Detalhe |
 |---|---|
 | Shell padrão | zsh com oh-my-zsh + powerlevel10k |
+| Configuração zsh | `.zshrc` carrega `~/.config/setup-wsl/zshrc.zsh` sem sobrescrever customizações existentes |
 | Tema Windows Terminal | Moonlight II injetado direto no settings.json |
 | Fonte Windows Terminal | MesloLGS NF instalada via PowerShell, sem admin |
 | Perfil Ubuntu no Terminal | Fonte e tema já apontados para os corretos |
@@ -98,6 +99,19 @@ docker ps   # deve funcionar sem sudo após reabrir
 | Extensão VS Code | Remote WSL instalada automaticamente |
 | Grupo docker | Usuário adicionado (efetiva após logout/login) |
 | Mirrored networking | `.wslconfig` configurado para compatibilidade com VPN e Boundary |
+| Resumo final | Warnings acumulados aparecem no fim da execução |
+
+---
+
+## Manutenção do repositório
+
+O repositório inclui um `Taskfile.yml` para validar mudanças no script e na documentação:
+
+```bash
+task check
+```
+
+Essa tarefa roda `bash -n`, `shellcheck` e `markdownlint-cli2`.
 
 ---
 
@@ -1121,10 +1135,11 @@ bat --diff arquivo.py      # mostra diff com git
 
 #### eza
 
-Alternativa moderna ao `ls` com cores, ícones e visualização de árvore. O setup configura `ls`, `la` e `lt` como aliases.
+Alternativa moderna ao `ls` com cores, ícones e visualização de árvore. O setup configura `ls`, `ll`, `la` e `lt` como aliases.
 
 ```bash
 ls                         # eza --group-directories-first
+ll                         # ls -lh
 la                         # eza -la (com permissões e datas)
 lt                         # árvore em até 2 níveis
 eza --git                  # mostra status git por arquivo
@@ -1233,7 +1248,7 @@ nslookup google.com
 
 Todos os comandos abaixo rodam no **PowerShell ou CMD do Windows**, não dentro do WSL.
 
-#### Distros disponíveis e instalação
+### Distros disponíveis e instalação
 
 ```powershell
 wsl --list --online               # lista todas as distros disponíveis para instalar
@@ -1241,7 +1256,7 @@ wsl --install -d Ubuntu-26.04     # instala uma distro específica
 wsl --update                      # atualiza o WSL para a versão mais recente
 ```
 
-#### Gerenciar distros instaladas
+### Gerenciar distros instaladas
 
 ```powershell
 wsl --list --verbose              # lista as distros instaladas com status e versão WSL
@@ -1250,7 +1265,7 @@ wsl --set-default Ubuntu-26.04   # define a distro padrão ao rodar 'wsl' sem ar
 wsl --set-version Ubuntu-26.04 2 # converte uma distro para WSL 2
 ```
 
-#### Iniciar e parar
+### Iniciar e parar
 
 ```powershell
 wsl                               # abre a distro padrão
@@ -1259,7 +1274,7 @@ wsl --shutdown                    # para todas as distros e o WSL imediatamente
 wsl -t Ubuntu-26.04               # para uma distro específica sem afetar as outras
 ```
 
-#### Backup e restauração
+### Backup e restauração
 
 ```powershell
 # Exporta a distro para um arquivo .tar — útil para backup ou migrar para outro PC
@@ -1273,16 +1288,16 @@ wsl --import Ubuntu-26-backup C:\WSL\Ubuntu-26-backup C:\backup\ubuntu-26.tar
 wsl -d Ubuntu-26-backup -- bash -c "echo '[user]\ndefault=weynne' >> /etc/wsl.conf"
 ```
 
-#### Remover uma distro
+### Remover uma distro
 
 ```powershell
 # Atenção: remove a distro e todos os dados permanentemente
 wsl --unregister Ubuntu-26.04
 ```
 
-#### Acessar arquivos do WSL pelo Windows Explorer
+### Acessar arquivos do WSL pelo Windows Explorer
 
-```
+```text
 \\wsl$\Ubuntu-26.04\home\<seu-usuario>
 ```
 

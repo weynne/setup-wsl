@@ -1,0 +1,15 @@
+version: '3'
+
+tasks:
+  check:
+    desc: Run repository checks
+    cmds:
+      - bash -n setup-wsl.sh
+      - shellcheck setup-wsl.sh
+      - markdownlint-cli2 README.md
+
+  lint:
+    desc: Run linters
+    cmds:
+      - shellcheck setup-wsl.sh
+      - markdownlint-cli2 README.md
