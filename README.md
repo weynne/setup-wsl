@@ -446,17 +446,15 @@ tasks:
 
 ### Editor de terminal
 
-#### Neovim + LazyVim
+#### Neovim
 
-Neovim é instalado pela release oficial mais recente. LazyVim é instalado a partir do starter oficial em `~/.config/nvim` quando ainda não existe configuração do Neovim. Inclui LSP, autocomplete, fuzzy finder, tree-sitter e integração com lazygit.
+Neovim é instalado pela release oficial mais recente, sem criar ou sobrescrever configuração em `~/.config/nvim`.
 
 ```bash
 nvim
 nvim README.md
 nvim .             # abre a pasta atual como projeto
 ```
-
-Se `~/.config/nvim` já existir, o setup não sobrescreve sua configuração.
 
 Comandos básicos:
 
@@ -465,18 +463,11 @@ Comandos básicos:
 | `nvim` | Abre o Neovim |
 | `nvim README.md` | Abre um arquivo direto |
 | `nvim .` | Abre a pasta atual como projeto |
-| `<Space>ff` | Busca arquivos |
-| `<Space>fg` | Busca texto no projeto |
-| `<Space>e` | Abre ou fecha o explorer |
-| `<Space>gg` | Abre o lazygit |
-| `:Lazy` | Gerencia plugins |
-| `:Mason` | Gerencia LSPs, formatters e linters |
-| `:LazyHealth` | Verifica a saúde da instalação |
 | `:w` | Salva o arquivo |
 | `:q` | Sai |
 | `:wq` | Salva e sai |
 
-**Em produção:** edição de arquivos em servidores via SSH onde VS Code não está disponível. Com LazyVim, o nvim tem LSP e autocomplete para HCL, YAML, Go e Python.
+**Em produção:** edição rápida de arquivos em servidores via SSH onde VS Code não está disponível.
 
 ### Containers
 

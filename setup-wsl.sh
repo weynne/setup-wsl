@@ -819,19 +819,6 @@ else
   skip "checkov already installed ($(checkov --version)), skipping..."
 fi
 
-# — LazyVim
-if [ ! -d "$HOME/.config/nvim" ]; then
-  info "Installing LazyVim starter..."
-  if git clone https://github.com/LazyVim/starter "$HOME/.config/nvim" -q \
-    && rm -rf "$HOME/.config/nvim/.git"; then
-    log "LazyVim starter installed"
-  else
-    warn "LazyVim starter install failed — skipping."
-  fi
-else
-  skip "Neovim config already exists at ~/.config/nvim, skipping LazyVim starter..."
-fi
-
 header "5/5 · Environment setup"
 
 # — Default shell
