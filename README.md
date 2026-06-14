@@ -256,6 +256,19 @@ Plugins ativos:
 | `terraform` | Autocomplete e aliases para Terraform |
 | `zsh-autosuggestions` | Sugere comandos enquanto você digita baseado no histórico |
 | `zsh-syntax-highlighting` | Colore comandos válidos em verde e inválidos em vermelho em tempo real |
+| `zsh-history-substring-search` | Busca no histórico filtrando pelo que você já digitou, navegando com ↑/↓ |
+
+O `zsh-history-substring-search` melhora as setas ↑/↓:
+
+- **Prompt vazio + ↑/↓** → percorre o histórico inteiro, na ordem, igual ao comportamento padrão.
+- **Digitou algo + ↑/↓** → percorre só os comandos do histórico que contêm o texto digitado.
+
+```bash
+git c↑     # cicla apenas pelos comandos anteriores que contêm "git c"
+↑          # com o prompt vazio, sobe o histórico normalmente
+```
+
+> Em comandos multi-linha o ↑/↓ vai direto para a busca no histórico em vez de mover o cursor entre as linhas — use ←/→ para navegar dentro da linha.
 
 #### tmux
 

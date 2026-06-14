@@ -878,6 +878,16 @@ else
   skip "zsh-syntax-highlighting already installed, skipping..."
 fi
 
+# — zsh-history-substring-search
+if [ ! -d "$ZSH_CUSTOM/plugins/zsh-history-substring-search" ]; then
+  info "Installing zsh-history-substring-search..."
+  git clone https://github.com/zsh-users/zsh-history-substring-search \
+    "$ZSH_CUSTOM/plugins/zsh-history-substring-search" -q
+  log "zsh-history-substring-search installed"
+else
+  skip "zsh-history-substring-search already installed, skipping..."
+fi
+
 # — .zshrc
 info "Generating managed zsh config..."
 SETUP_WSL_CONFIG_DIR="$HOME/.config/setup-wsl"
@@ -903,6 +913,7 @@ plugins=(
   terraform
   zsh-autosuggestions
   zsh-syntax-highlighting
+  zsh-history-substring-search
 )
 
 source $ZSH/oh-my-zsh.sh
@@ -958,6 +969,13 @@ command -v zoxide &>/dev/null && eval "$(zoxide init zsh)"
 # fzf keybindings/completion (Debian/Ubuntu package layout)
 [ -f /usr/share/doc/fzf/examples/key-bindings.zsh ] && source /usr/share/doc/fzf/examples/key-bindings.zsh
 [ -f /usr/share/doc/fzf/examples/completion.zsh ] && source /usr/share/doc/fzf/examples/completion.zsh
+
+# zsh-history-substring-search: navega no histórico filtrado pelo que já foi digitado.
+# Bind das setas ↑/↓ (códigos de terminfo + fallback dos escapes comuns).
+bindkey "${terminfo[kcuu1]:-^[[A}" history-substring-search-up
+bindkey "${terminfo[kcud1]:-^[[B}" history-substring-search-down
+bindkey '^[OA' history-substring-search-up
+bindkey '^[OB' history-substring-search-down
 
 # p10k
 [[ ! -f ~/.p10k.zsh ]] || source ~/.p10k.zsh
