@@ -398,6 +398,25 @@ else
   skip "Neovim already installed ($(nvim --version | head -n1)), skipping..."
 fi
 
+# — lazygit
+if ! command -v lazygit &>/dev/null; then
+  info "Installing lazygit..."
+  if LAZYGIT_VERSION=$(github_latest_tag "jesseduffield/lazygit"); then
+    LAZYGIT_VERSION_NUMBER="${LAZYGIT_VERSION#v}"
+    if curl -fsSL "https://github.com/jesseduffield/lazygit/releases/download/${LAZYGIT_VERSION}/lazygit_${LAZYGIT_VERSION_NUMBER}_Linux_x86_64.tar.gz" \
+      | tar -xz -C /tmp lazygit \
+      && sudo install -o root -g root -m 0755 /tmp/lazygit /usr/local/bin/lazygit \
+      && rm -f /tmp/lazygit; then
+      log "lazygit $(lazygit --version) installed"
+    else
+      warn "lazygit install failed — skipping."
+    fi
+  else
+    warn "Could not resolve lazygit release — skipping."
+  fi
+else
+  skip "lazygit already installed ($(lazygit --version)), skipping..."
+fi
 
 # — lazydocker
 if ! command -v lazydocker &>/dev/null; then
