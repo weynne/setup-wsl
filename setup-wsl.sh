@@ -173,7 +173,7 @@ PACKAGES=(
   python3 python3-pip pipx
   gcc unzip fuse
   age
-  htop net-tools iproute2 dnsutils
+  htop net-tools iproute2 bind9-dnsutils
   tmux
 )
 
